@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Transcriber{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'transcriber/css/styles.css' %}">
+    <link rel="manifest" href="{% static 'transcriber/manifest.json' %}">
+    <meta name="theme-color" content="#4a6cf7">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="{% url 'transcriber:upload' %}">Importal Transcribe</a></h1>
+            <nav class="site-nav">
+                <a href="{% url 'transcriber:upload' %}" class="nav-link">Upload File</a>
+                <a href="{% url 'transcriber:record' %}" class="nav-link">Record Audio</a>
+            </nav>
+        </header>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,34 @@
+{% extends "transcriber/base.html" %}
+
+{% block title %}Upload Audio{% endblock %}
+
+{% block content %}
+<h2>Upload Audio / Video File</h2>
+<form method="post" enctype="multipart/form-data" id="upload-form">
+    {% csrf_token %}
+    <div class="form-group">
+        <label for="id_audio_file">{{ form.audio_file.label }}</label>
+        {{ form.audio_file }}
+        {% if form.audio_file.errors %}
+            <ul class="error-list">
+                {% for error in form.audio_file.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <p class="help-text">{{ form.audio_file.help_text }}</p>
+    </div>
+    <button type="submit" id="submit-btn">Transcribe</button>
+</form>
+<div id="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Transcribing audio... This may take a minute for longer files.</p>
+</div>
+<script>
+document.getElementById('upload-form').addEventListener('submit', function() {
+    document.getElementById('submit-btn').disabled = true;
+    document.getElementById('submit-btn').textContent = 'Processing...';
+    document.getElementById('loading').style.display = 'block';
+});
+</script>
+{% endblock %}

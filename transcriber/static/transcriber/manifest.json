@@ -1,0 +1,10 @@
+{
+  "name": "Importal Transcribe",
+  "short_name": "Transcribe",
+  "description": "Record and transcribe audio using OpenAI Whisper",
+  "start_url": "/record/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4a6cf7",
+  "icons": []
+}

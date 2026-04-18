@@ -1,0 +1,15 @@
+{% extends "transcriber/base.html" %}
+
+{% block title %}Transcript: {{ transcript.original_filename }}{% endblock %}
+
+{% block content %}
+<h2>{{ transcript.original_filename }}</h2>
+<p class="meta">Transcribed on {{ transcript.created_at|date:"N j, Y g:i A" }}</p>
+<div class="transcript-box">
+    <pre>{{ transcript.transcript_text }}</pre>
+</div>
+<div class="actions">
+    <a href="{% url 'transcriber:download' pk=transcript.pk %}" class="btn">Download .txt</a>
+    <a href="{% url 'transcriber:upload' %}" class="btn btn-secondary">Transcribe Another</a>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "transcriber/base.html" %}
+{% load static %}
+
+{% block title %}Record Audio{% endblock %}
+
+{% block content %}
+<h2>Record Audio</h2>
+<div class="recorder">
+    <button id="record-btn" class="record-btn" aria-label="Start recording">Record</button>
+    <div id="timer" class="timer" aria-live="polite">00:00</div>
+    <p id="status-msg" class="status-msg" aria-live="polite">Press Record to start.</p>
+    <audio id="audio-preview" controls hidden></audio>
+    <button id="upload-btn" class="upload-btn" disabled>Upload &amp; Transcribe</button>
+</div>
+
+{% csrf_token %}
+<script src="{% static 'transcriber/js/recorder.js' %}"></script>
+{% endblock %}
