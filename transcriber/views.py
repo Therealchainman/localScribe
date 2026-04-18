@@ -1,4 +1,7 @@
+import io
+import os
 import time
+import zipfile
 
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -60,7 +63,17 @@ def result_view(request, pk):
 
 def download_view(request, pk):
     transcript = get_object_or_404(Transcript, pk=pk)
-    response = HttpResponse(transcript.transcript_text, content_type='text/plain')
+
+    _, audio_ext = os.path.splitext(transcript.audio_file.name)
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with transcript.audio_file.open('rb') as af:
+            zf.writestr(f'audio{audio_ext}', af.read())
+        zf.writestr('transcript.txt', transcript.transcript_text)
+
+    buffer.seek(0)
+    response = HttpResponse(buffer.read(), content_type='application/zip')
     base_name = transcript.original_filename.rsplit('.', 1)[0]
-    response['Content-Disposition'] = f'attachment; filename="{base_name}.txt"'
+    response['Content-Disposition'] = f'attachment; filename="{base_name}.zip"'
     return response

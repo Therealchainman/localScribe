@@ -18,7 +18,7 @@
     <pre>{{ transcript.transcript_text }}</pre>
 </div>
 <div class="actions">
-    <a href="{% url 'transcriber:download' pk=transcript.pk %}" class="btn">Download .txt</a>
+    <a href="{% url 'transcriber:download' pk=transcript.pk %}" class="btn">Download</a>
     <a id="again-btn" href="{% url 'transcriber:upload' %}" class="btn btn-secondary">Transcribe Another</a>
 </div>
 <script>
