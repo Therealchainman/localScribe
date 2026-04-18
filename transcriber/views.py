@@ -2,16 +2,22 @@ import os
 import tempfile
 from pathlib import Path
 
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from .forms import AudioUploadForm
-from .services import transcribe_audio
+from .services import WHISPER_MODEL_SIZES, resolve_model_size, transcribe_audio
 
 
 def main_view(request, default_tab='record'):
-    return render(request, 'transcriber/record.html', {'default_tab': default_tab})
+    default_model_size = resolve_model_size(settings.WHISPER_MODEL_SIZE)
+    return render(request, 'transcriber/record.html', {
+        'default_tab': default_tab,
+        'default_whisper_model': default_model_size,
+        'whisper_model_sizes': WHISPER_MODEL_SIZES,
+    })
 
 
 def _download_filename(original_filename: str) -> str:
@@ -19,7 +25,7 @@ def _download_filename(original_filename: str) -> str:
     return f'{stem}.zip'
 
 
-def _transcribe_uploaded_file(uploaded_file):
+def _transcribe_uploaded_file(uploaded_file, model_size: str):
     original_filename = uploaded_file.name or 'audio'
     suffix = Path(original_filename).suffix or '.tmp'
     temp_path = None
@@ -30,7 +36,7 @@ def _transcribe_uploaded_file(uploaded_file):
                 temp_file.write(chunk)
             temp_path = temp_file.name
 
-        result = transcribe_audio(temp_path)
+        result = transcribe_audio(temp_path, model_size=model_size)
         return {
             'transcript': result['text'],
             'filename': original_filename,
@@ -48,7 +54,12 @@ def _handle_upload(request):
         return JsonResponse({'error': form.errors.as_json()}, status=400)
 
     try:
-        payload = _transcribe_uploaded_file(form.cleaned_data['audio_file'])
+        model_size = resolve_model_size(request.POST.get('model_size'))
+    except ValueError as exc:
+        return JsonResponse({'error': str(exc)}, status=400)
+
+    try:
+        payload = _transcribe_uploaded_file(form.cleaned_data['audio_file'], model_size)
     except Exception as exc:
         return JsonResponse({'error': f'Transcription failed: {exc}'}, status=500)
     return JsonResponse(payload)

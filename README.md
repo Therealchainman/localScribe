@@ -36,9 +36,10 @@ Open http://127.0.0.1:8000/ in your browser.
 ## Usage
 
 1. Record audio in the browser, or select an audio/video file to upload.
-2. Click **Upload & Transcribe** or **Transcribe**.
-3. Wait for the transcript to generate; the first run downloads the configured Whisper model.
-4. Review the transcript in the browser, then click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`.
+2. Choose a Whisper model from the header selector if you want something other than the default `large` model for this page session.
+3. Click **Upload & Transcribe** or **Transcribe**.
+4. Wait for the transcript to generate; the first use of a given model downloads or loads that model.
+5. Review the transcript in the browser, then click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`.
 
 ## Configuration
 
@@ -48,6 +49,8 @@ Set these in `transcribe_project/settings.py`:
 |---------|---------|-------------|
 | `WHISPER_MODEL_SIZE` | `large` | Whisper model: `tiny`, `base`, `small`, `medium`, `large` |
 | `DATA_UPLOAD_MAX_MEMORY_SIZE` | 100 MB | Maximum upload file size |
+
+The header model selector defaults to `large` on each page load. Changing it only affects the current browser page state; refreshing or reopening the app resets the selector back to the configured default.
 
 ## Privacy and storage
 

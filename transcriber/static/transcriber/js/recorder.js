@@ -36,6 +36,7 @@ function getCsrfToken() {
 // --- Element refs ---
 const panelRecord       = document.getElementById('panel-record');
 const panelUpload       = document.getElementById('panel-upload');
+const modelSizeSelect   = document.getElementById('model-size-select');
 const recordBtn         = document.getElementById('record-btn');
 const recordingControls = document.getElementById('recording-controls');
 const pauseBtn          = document.getElementById('pause-btn');
@@ -117,6 +118,10 @@ function setStatus(text, isError = false) {
 function getSelectedSource() {
     const radio = document.querySelector('input[name="audio-source"]:checked');
     return radio ? radio.value : 'mic';
+}
+
+function getSelectedModelSize() {
+    return modelSizeSelect ? modelSizeSelect.value : 'large';
 }
 
 function revokeTranscriptDownloadURL() {
@@ -259,6 +264,7 @@ function showLoading(audioURL) {
     panelRecord.hidden = true;
     panelUpload.hidden = true;
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = true; });
+    if (modelSizeSelect) modelSizeSelect.disabled = true;
     loadingAudio.src = audioURL || '';
     loadingDiv.style.display = 'block';
     transcribeTimer.textContent = '00:00:00';
@@ -274,6 +280,7 @@ function hideLoading() {
     transcribeTimerInterval = null;
     loadingDiv.style.display = 'none';
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = false; });
+    if (modelSizeSelect) modelSizeSelect.disabled = false;
 }
 
 function showResult(transcript, audioObjectURL, filename, downloadFilename, sourceTab) {
@@ -467,6 +474,7 @@ uploadBtn.addEventListener('click', async () => {
     const ext = mimeToExtension(activeMime);
     const formData = new FormData();
     formData.append('audio_file', recordedBlob, `recording${ext}`);
+    formData.append('model_size', getSelectedModelSize());
 
     uploadBtn.disabled = true;
     recordingControls.style.display = 'none';
@@ -518,6 +526,7 @@ transcribeFileBtn.addEventListener('click', async () => {
 
     const formData = new FormData();
     formData.append('audio_file', uploadedFile, uploadedFile.name);
+    formData.append('model_size', getSelectedModelSize());
     transcribeFileBtn.disabled = true;
     showLoading(uploadedObjectURL);
 

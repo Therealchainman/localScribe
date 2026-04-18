@@ -10,8 +10,9 @@
 </head>
 <body>
     <div class="container">
-        <header>
+        <header class="site-header">
             <h1><a href="{% url 'transcriber:record' %}">Local Scribe</a></h1>
+            {% block header_controls %}{% endblock %}
         </header>
         <main>
             {% block content %}{% endblock %}
