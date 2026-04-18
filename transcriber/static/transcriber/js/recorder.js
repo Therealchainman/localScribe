@@ -28,11 +28,13 @@ function getCsrfToken() {
     const value = `; ${document.cookie}`;
     const parts = value.split('; csrftoken=');
     if (parts.length === 2) return parts.pop().split(';').shift();
-    // Fallback: read from hidden input rendered by {% csrf_token %}
     const input = document.querySelector('input[name="csrfmiddlewaretoken"]');
     return input ? input.value : '';
 }
 
+// --- Element refs ---
+const panelRecord       = document.getElementById('panel-record');
+const panelUpload       = document.getElementById('panel-upload');
 const recordBtn         = document.getElementById('record-btn');
 const recordingControls = document.getElementById('recording-controls');
 const pauseBtn          = document.getElementById('pause-btn');
@@ -42,21 +44,52 @@ const audioPreview      = document.getElementById('audio-preview');
 const uploadBtn         = document.getElementById('upload-btn');
 const statusMsg         = document.getElementById('status-msg');
 const tabHint           = document.getElementById('tab-hint');
+const loadingDiv        = document.getElementById('loading');
+const transcribeTimer   = document.getElementById('transcription-timer');
+const fileInput         = document.getElementById('file-input');
+const transcribeFileBtn = document.getElementById('transcribe-file-btn');
+const uploadFileError   = document.getElementById('upload-file-error');
+const resultSection     = document.getElementById('result-section');
+const resultFilename    = document.getElementById('result-filename');
+const resultMeta        = document.getElementById('result-meta');
+const resultAudio       = document.getElementById('result-audio');
+const resultTranscript  = document.getElementById('result-transcript');
+const resultDownloadBtn = document.getElementById('result-download-btn');
+const startOverBtn      = document.getElementById('start-over-btn');
 
+// --- Recording state ---
 let mediaRecorder    = null;
 let chunks           = [];
 let timerInterval    = null;
 let elapsed          = 0;
 let recordedBlob     = null;
 let activeMime       = '';
-// Extra streams/context to clean up when using tab or mixed mode
 let secondaryStreams = [];
 let audioContext     = null;
 
+// --- SPA state ---
+let recordedObjectURL       = null;
+let uploadedFile             = null;
+let uploadedObjectURL        = null;
+let currentPk                = null;
+let transcribeTimerInterval  = null;
+let transcribeElapsed        = 0;
+let skipNextStop             = false;  // guard for async onstop after tab switch
+
+// --- Helpers ---
 function formatTime(s) {
     const m   = Math.floor(s / 60).toString().padStart(2, '0');
     const sec = (s % 60).toString().padStart(2, '0');
     return `${m}:${sec}`;
+}
+
+function formatTimeLong(s) {
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return String(h).padStart(2, '0') + ':' +
+           String(m).padStart(2, '0') + ':' +
+           String(sec).padStart(2, '0');
 }
 
 function setStatus(text, isError = false) {
@@ -69,7 +102,81 @@ function getSelectedSource() {
     return radio ? radio.value : 'mic';
 }
 
-// Show/hide the tab hint and disable unavailable options on page load
+// --- State management ---
+function clearState() {
+    // Revoke object URLs before nulling them
+    resultAudio.src = '';
+    if (recordedObjectURL) { URL.revokeObjectURL(recordedObjectURL); recordedObjectURL = null; }
+    if (uploadedObjectURL) { URL.revokeObjectURL(uploadedObjectURL); uploadedObjectURL = null; }
+    recordedBlob = null;
+    uploadedFile = null;
+    currentPk = null;
+    // Reset result section
+    resultSection.hidden = true;
+    resultTranscript.textContent = '';
+    resultFilename.textContent = '';
+    resultMeta.textContent = '';
+    resultDownloadBtn.href = '#';
+    // Reset upload tab
+    fileInput.value = '';
+    transcribeFileBtn.disabled = true;
+    uploadFileError.hidden = true;
+    uploadFileError.textContent = '';
+}
+
+function showLoading() {
+    panelRecord.hidden = true;
+    panelUpload.hidden = true;
+    document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = true; });
+    loadingDiv.style.display = 'block';
+    transcribeTimer.textContent = '00:00:00';
+    transcribeElapsed = 0;
+    transcribeTimerInterval = setInterval(() => {
+        transcribeElapsed++;
+        transcribeTimer.textContent = formatTimeLong(transcribeElapsed);
+    }, 1000);
+}
+
+function hideLoading() {
+    clearInterval(transcribeTimerInterval);
+    transcribeTimerInterval = null;
+    loadingDiv.style.display = 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = false; });
+}
+
+function showResult(transcript, audioObjectURL, pk, filename, sourceTab) {
+    currentPk = pk;
+    resultFilename.textContent = filename;
+    resultMeta.textContent = `Transcribed in ${formatTimeLong(transcribeElapsed)}`;
+    resultTranscript.textContent = transcript;
+    resultAudio.src = audioObjectURL;
+    resultDownloadBtn.href = `/download/${pk}/`;
+    startOverBtn.textContent = sourceTab === 'record' ? 'Record Another' : 'Transcribe Another';
+    resultSection.hidden = false;
+}
+
+function switchTab(tabName) {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        skipNextStop = true;
+        stopRecording();
+    }
+    clearState();
+    // Reset record tab UI
+    recordBtn.style.display = '';
+    recordingControls.style.display = 'none';
+    timerDisplay.style.display = 'none';
+    statusMsg.style.display = '';
+    uploadBtn.disabled = true;
+    audioPreview.hidden = true;
+    setStatus('Press Record to start.');
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.setAttribute('aria-selected', String(btn.dataset.tab === tabName));
+    });
+    panelRecord.hidden = tabName !== 'record';
+    panelUpload.hidden = tabName !== 'upload';
+}
+
+// --- Source selector init ---
 (function initSourceSelector() {
     const hasDisplayMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
     document.querySelectorAll('input[name="audio-source"][value="tab"], input[name="audio-source"][value="both"]').forEach((el) => {
@@ -87,6 +194,7 @@ function getSelectedSource() {
     });
 })();
 
+// --- Recording ---
 async function getRecordingStream() {
     const source = getSelectedSource();
 
@@ -105,7 +213,7 @@ async function getRecordingStream() {
         return new MediaStream(audioTracks);
     }
 
-    // source === 'both': mic + tab mixed via AudioContext
+    // source === 'both'
     const [micStream, displayStream] = await Promise.all([
         navigator.mediaDevices.getUserMedia({ audio: true }),
         navigator.mediaDevices.getDisplayMedia({ video: true, audio: true }),
@@ -144,9 +252,14 @@ async function startRecording() {
     };
 
     mediaRecorder.onstop = () => {
+        if (skipNextStop) {
+            skipNextStop = false;
+            return;
+        }
         const blobType = activeMime || 'audio/webm';
         recordedBlob = new Blob(chunks, { type: blobType });
-        audioPreview.src = URL.createObjectURL(recordedBlob);
+        recordedObjectURL = URL.createObjectURL(recordedBlob);
+        audioPreview.src = recordedObjectURL;
         audioPreview.hidden = false;
         uploadBtn.disabled = false;
     };
@@ -188,6 +301,7 @@ function stopRecording() {
     setStatus('Recording ended. Preview below or start a new recording.');
 }
 
+// --- Record tab event listeners ---
 recordBtn.addEventListener('click', () => {
     startRecording();
 });
@@ -215,41 +329,18 @@ endBtn.addEventListener('click', () => {
     stopRecording();
 });
 
-const loadingDiv    = document.getElementById('loading');
-const transcribeTimer = document.getElementById('transcription-timer');
-
-function formatTimeLong(s) {
-    const h   = Math.floor(s / 3600);
-    const m   = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    return String(h).padStart(2, '0') + ':' +
-           String(m).padStart(2, '0') + ':' +
-           String(sec).padStart(2, '0');
-}
-
 uploadBtn.addEventListener('click', async () => {
     if (!recordedBlob) return;
 
-    const ext      = mimeToExtension(activeMime);
-    const filename = `recording${ext}`;
+    const ext = mimeToExtension(activeMime);
     const formData = new FormData();
-    formData.append('audio_file', recordedBlob, filename);
+    formData.append('audio_file', recordedBlob, `recording${ext}`);
 
     uploadBtn.disabled = true;
-    recordBtn.style.display = 'none';
     recordingControls.style.display = 'none';
     timerDisplay.style.display = 'none';
     statusMsg.style.display = 'none';
-
-    loadingDiv.style.display = 'block';
-    transcribeTimer.textContent = '00:00:00';
-
-    const uploadStart = Date.now();
-    elapsed = 0;
-    timerInterval = setInterval(() => {
-        elapsed++;
-        transcribeTimer.textContent = formatTimeLong(elapsed);
-    }, 1000);
+    showLoading();
 
     try {
         const resp = await fetch('/api/upload/', {
@@ -258,25 +349,113 @@ uploadBtn.addEventListener('click', async () => {
             body: formData,
         });
         const data = await resp.json();
-        clearInterval(timerInterval);
-        if (resp.ok && data.redirect_url) {
-            const duration = Math.round((Date.now() - uploadStart) / 1000);
-            window.location.href = data.redirect_url + '?t=' + duration + '&source=record';
+        hideLoading();
+        if (resp.ok) {
+            showResult(data.transcript, recordedObjectURL, data.pk, data.filename, 'record');
         } else {
-            loadingDiv.style.display = 'none';
             recordBtn.style.display = '';
-            timerDisplay.style.display = '';
             statusMsg.style.display = '';
-            setStatus(`Upload failed. Please try again.`, true);
+            setStatus('Upload failed. Please try again.', true);
             uploadBtn.disabled = false;
         }
     } catch (err) {
-        clearInterval(timerInterval);
-        loadingDiv.style.display = 'none';
+        hideLoading();
         recordBtn.style.display = '';
-        timerDisplay.style.display = '';
         statusMsg.style.display = '';
         setStatus(`Network error: ${err.message}`, true);
         uploadBtn.disabled = false;
     }
 });
+
+// --- Upload tab event listeners ---
+fileInput.addEventListener('change', () => {
+    if (uploadedObjectURL) { URL.revokeObjectURL(uploadedObjectURL); uploadedObjectURL = null; }
+    uploadedFile = fileInput.files[0] || null;
+    if (uploadedFile) {
+        uploadedObjectURL = URL.createObjectURL(uploadedFile);
+        transcribeFileBtn.disabled = false;
+    } else {
+        transcribeFileBtn.disabled = true;
+    }
+    uploadFileError.hidden = true;
+    uploadFileError.textContent = '';
+});
+
+transcribeFileBtn.addEventListener('click', async () => {
+    if (!uploadedFile) return;
+
+    const formData = new FormData();
+    formData.append('audio_file', uploadedFile, uploadedFile.name);
+    transcribeFileBtn.disabled = true;
+    showLoading();
+
+    try {
+        const resp = await fetch('/api/upload-file/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: formData,
+        });
+        const data = await resp.json();
+        hideLoading();
+        if (resp.ok) {
+            showResult(data.transcript, uploadedObjectURL, data.pk, data.filename, 'upload');
+        } else {
+            panelUpload.hidden = false;
+            uploadFileError.textContent = 'Upload failed. Check the file format and try again.';
+            uploadFileError.hidden = false;
+            transcribeFileBtn.disabled = false;
+        }
+    } catch (err) {
+        hideLoading();
+        panelUpload.hidden = false;
+        uploadFileError.textContent = `Network error: ${err.message}`;
+        uploadFileError.hidden = false;
+        transcribeFileBtn.disabled = false;
+    }
+});
+
+// --- Result section ---
+startOverBtn.addEventListener('click', () => {
+    const activeTab = document.querySelector('.tab-btn[aria-selected="true"]')?.dataset.tab || 'record';
+    clearState();
+    panelRecord.hidden = activeTab !== 'record';
+    panelUpload.hidden = activeTab !== 'upload';
+});
+
+// Copy button
+const copyBtn = document.querySelector('.copy-transcript-btn');
+let copyResetTimer = null;
+if (copyBtn) {
+    const setCopyState = (state, label = '') => {
+        copyBtn.dataset.state = state;
+        copyBtn.querySelector('.copy-transcript-status').textContent = label;
+    };
+    copyBtn.addEventListener('click', async () => {
+        window.clearTimeout(copyResetTimer);
+        try {
+            await navigator.clipboard.writeText(resultTranscript.textContent);
+            setCopyState('copied', 'Copied');
+        } catch {
+            setCopyState('failed', 'Failed');
+        }
+        copyResetTimer = window.setTimeout(() => setCopyState('idle'), 1800);
+    });
+}
+
+// beforeunload guard
+window.addEventListener('beforeunload', (e) => {
+    if (currentPk !== null) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+// --- Tab switching ---
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+// Initialize from server-provided default tab
+if (typeof DEFAULT_TAB !== 'undefined' && DEFAULT_TAB === 'upload') {
+    switchTab('upload');
+}

@@ -463,3 +463,57 @@ audio {
     background-color: #999;
     cursor: not-allowed;
 }
+
+/* Tab navigation */
+.tabs-bar {
+    display: flex;
+    border-bottom: 2px solid #e5e5e5;
+    margin-bottom: 1.5rem;
+}
+
+.tab-btn {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    color: #555;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+    color: #4a6cf7;
+}
+
+.tab-btn[aria-selected="true"] {
+    color: #4a6cf7;
+    border-bottom-color: #4a6cf7;
+}
+
+.tab-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* Upload tab panel */
+.upload-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1rem 0;
+}
+
+/* Warning banner shown when a transcript is present */
+.warning-banner {
+    font-size: 0.8rem;
+    color: #888;
+    background: #fffbe6;
+    border: 1px solid #f0d060;
+    border-radius: 4px;
+    padding: 0.4rem 0.75rem;
+    margin-bottom: 1rem;
+    text-align: center;
+}

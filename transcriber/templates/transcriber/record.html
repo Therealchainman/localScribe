@@ -1,36 +1,81 @@
 {% extends "transcriber/base.html" %}
 {% load static %}
 
-{% block title %}Record Audio{% endblock %}
+{% block title %}Local Scribe{% endblock %}
 
 {% block content %}
-<h2>Record Audio</h2>
-<div class="recorder">
-    <fieldset class="source-selector">
-        <legend>Audio Source</legend>
-        <label><input type="radio" name="audio-source" value="mic" checked> Microphone</label>
-        <label><input type="radio" name="audio-source" value="tab"> Tab Audio</label>
-        <label><input type="radio" name="audio-source" value="both"> Microphone + Tab</label>
-    </fieldset>
-    <p id="tab-hint" class="hint" hidden>
-        In the browser prompt, select a tab and enable &ldquo;Share audio&rdquo; (or &ldquo;Share tab audio&rdquo;).
-    </p>
-    <button id="record-btn" class="record-btn" aria-label="Start recording">Record</button>
-    <div id="recording-controls" class="recording-controls" style="display: none;">
-        <button id="pause-btn" class="pause-btn">Pause</button>
-        <button id="end-btn" class="end-btn">End Recording</button>
-    </div>
-    <div id="timer" class="timer" aria-live="polite" style="display: none;">00:00</div>
-    <p id="status-msg" class="status-msg" aria-live="polite">Press Record to start.</p>
-    <audio id="audio-preview" controls hidden></audio>
-    <button id="upload-btn" class="upload-btn" disabled>Upload &amp; Transcribe</button>
+<div class="tabs-bar" role="tablist">
+    <button class="tab-btn" id="tab-record" role="tab" aria-selected="true"
+            aria-controls="panel-record" data-tab="record">Record</button>
+    <button class="tab-btn" id="tab-upload" role="tab" aria-selected="false"
+            aria-controls="panel-upload" data-tab="upload">Upload</button>
 </div>
+
+<div id="panel-record" class="tab-panel" role="tabpanel" aria-labelledby="tab-record">
+    <div class="recorder">
+        <fieldset class="source-selector">
+            <legend>Audio Source</legend>
+            <label><input type="radio" name="audio-source" value="mic" checked> Microphone</label>
+            <label><input type="radio" name="audio-source" value="tab"> Tab Audio</label>
+            <label><input type="radio" name="audio-source" value="both"> Microphone + Tab</label>
+        </fieldset>
+        <p id="tab-hint" class="hint" hidden>
+            In the browser prompt, select a tab and enable &ldquo;Share audio&rdquo; (or &ldquo;Share tab audio&rdquo;).
+        </p>
+        <button id="record-btn" class="record-btn" aria-label="Start recording">Record</button>
+        <div id="recording-controls" class="recording-controls" style="display: none;">
+            <button id="pause-btn" class="pause-btn">Pause</button>
+            <button id="end-btn" class="end-btn">End Recording</button>
+        </div>
+        <div id="timer" class="timer" aria-live="polite" style="display: none;">00:00</div>
+        <p id="status-msg" class="status-msg" aria-live="polite">Press Record to start.</p>
+        <audio id="audio-preview" controls hidden></audio>
+        <button id="upload-btn" class="upload-btn" disabled>Upload &amp; Transcribe</button>
+    </div>
+</div>
+
+<div id="panel-upload" class="tab-panel" role="tabpanel" aria-labelledby="tab-upload" hidden>
+    <div class="upload-section">
+        <div class="form-group">
+            <label for="file-input">Select an audio or video file</label>
+            <input type="file" id="file-input"
+                   accept=".m4a,.mov,.mp4,.webm,.ogg,.wav,.mp3,audio/*,video/quicktime,video/webm">
+            <p class="help-text">Accepted: .m4a, .mov, .mp4, .webm, .ogg, .wav, .mp3. Max 100 MB.</p>
+        </div>
+        <p id="upload-file-error" class="status-msg error" hidden></p>
+        <button id="transcribe-file-btn" class="upload-btn" disabled>Transcribe</button>
+    </div>
+</div>
+
 <div id="loading" style="display: none;">
     <div class="spinner"></div>
-    <p>Transcribing audio... This may take a minute for longer files.</p>
+    <p>Transcribing audio&hellip; This may take a minute for longer files.</p>
     <p id="transcription-timer" style="font-size: 1.1em; color: #555; font-variant-numeric: tabular-nums;">00:00:00</p>
 </div>
 
+<section id="result-section" hidden>
+    <p class="warning-banner">Leaving or refreshing this page will discard this transcript.</p>
+    <h2 id="result-filename"></h2>
+    <p id="result-meta" class="meta"></p>
+    <audio id="result-audio" controls style="width: 100%; margin-bottom: 1.5rem;"></audio>
+    <div class="transcript-box">
+        <button type="button" class="copy-transcript-btn" aria-label="Copy transcript text">
+            <span class="copy-transcript-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M9 9a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V9Zm-6 4a2 2 0 0 0 2 2h1v-2H5V5h8V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9Z"/>
+                </svg>
+            </span>
+            <span class="copy-transcript-status" aria-hidden="true"></span>
+        </button>
+        <pre id="result-transcript"></pre>
+    </div>
+    <div class="actions">
+        <a id="result-download-btn" href="#" class="btn">Download .txt</a>
+        <button id="start-over-btn" class="btn btn-secondary">Transcribe Another</button>
+    </div>
+</section>
+
 {% csrf_token %}
+<script>const DEFAULT_TAB = '{{ default_tab }}';</script>
 <script src="{% static 'transcriber/js/recorder.js' %}"></script>
 {% endblock %}
