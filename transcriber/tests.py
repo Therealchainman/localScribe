@@ -143,6 +143,13 @@ class PageTests(SimpleTestCase):
         self.assertContains(response, '<option value="small">small</option>', html=False)
         self.assertContains(response, '<option value="medium">medium</option>', html=False)
 
+    def test_main_page_renders_retry_button_in_result_actions(self):
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="result-retry-btn"', html=False)
+        self.assertContains(response, '>Retry</button>', html=False)
+
 
 class ServiceTests(SimpleTestCase):
     def test_transcription_lock_blocks_model_switch_until_active_transcription_finishes(self):

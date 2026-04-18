@@ -39,7 +39,8 @@ Open http://127.0.0.1:8000/ in your browser.
 2. Choose a Whisper model from the header selector if you want something other than the default `large` model for this page session.
 3. Click **Upload & Transcribe** or **Transcribe**.
 4. Wait for the transcript to generate; the first use of a given model downloads or loads that model.
-5. Review the transcript in the browser, then click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`.
+5. Review the transcript in the browser. You can switch models and click **Retry** to transcribe the same audio again without re-recording or re-uploading.
+6. Click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`.
 
 ## Configuration
 

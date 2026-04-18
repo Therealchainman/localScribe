@@ -58,6 +58,7 @@ const resultMeta        = document.getElementById('result-meta');
 const resultAudio       = document.getElementById('result-audio');
 const resultTranscript  = document.getElementById('result-transcript');
 const resultDownloadBtn = document.getElementById('result-download-btn');
+const resultRetryBtn    = document.getElementById('result-retry-btn');
 const startOverBtn      = document.getElementById('start-over-btn');
 
 // --- Recording state ---
@@ -76,6 +77,7 @@ let uploadedFile            = null;
 let uploadedObjectURL       = null;
 let transcriptDownloadURL   = null;
 let resultAudioFile         = null;
+let currentResultSourceTab  = null;
 let isPreparingDownload     = false;
 let transcribeTimerInterval = null;
 let transcribeElapsed       = 0;
@@ -245,6 +247,7 @@ function clearState() {
     recordedBlob = null;
     uploadedFile = null;
     resultAudioFile = null;
+    currentResultSourceTab = null;
     isPreparingDownload = false;
     // Reset result section
     resultSection.hidden = true;
@@ -263,6 +266,7 @@ function clearState() {
 function showLoading(audioURL) {
     panelRecord.hidden = true;
     panelUpload.hidden = true;
+    resultSection.hidden = true;
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = true; });
     if (modelSizeSelect) modelSizeSelect.disabled = true;
     loadingAudio.src = audioURL || '';
@@ -289,9 +293,89 @@ function showResult(transcript, audioObjectURL, filename, downloadFilename, sour
     resultTranscript.textContent = transcript;
     resultAudio.src = audioObjectURL;
     resultAudioFile = sourceTab === 'record' ? recordedBlob : uploadedFile;
+    currentResultSourceTab = sourceTab;
     resultDownloadBtn.dataset.filename = downloadFilename;
     startOverBtn.textContent = sourceTab === 'record' ? 'Record Another' : 'Transcribe Another';
     resultSection.hidden = false;
+}
+
+function buildTranscriptionRequest(sourceTab) {
+    const formData = new FormData();
+
+    if (sourceTab === 'record') {
+        if (!recordedBlob || !recordedObjectURL) return null;
+        const ext = mimeToExtension(activeMime);
+        formData.append('audio_file', recordedBlob, `recording${ext}`);
+        formData.append('model_size', getSelectedModelSize());
+        return { formData, audioURL: recordedObjectURL };
+    }
+
+    if (sourceTab === 'upload') {
+        if (!uploadedFile || !uploadedObjectURL) return null;
+        formData.append('audio_file', uploadedFile, uploadedFile.name);
+        formData.append('model_size', getSelectedModelSize());
+        return { formData, audioURL: uploadedObjectURL };
+    }
+
+    return null;
+}
+
+function prepareTranscriptionUI(sourceTab) {
+    if (sourceTab === 'record') {
+        uploadBtn.disabled = true;
+        recordingControls.style.display = 'none';
+        timerDisplay.style.display = 'none';
+        statusMsg.style.display = 'none';
+        return;
+    }
+
+    transcribeFileBtn.disabled = true;
+    uploadFileError.hidden = true;
+    uploadFileError.textContent = '';
+}
+
+function restoreTranscriptionUIAfterFailure(sourceTab, errorText) {
+    if (sourceTab === 'record') {
+        recordBtn.style.display = '';
+        statusMsg.style.display = '';
+        setStatus(errorText, true);
+        uploadBtn.disabled = false;
+        return;
+    }
+
+    panelUpload.hidden = false;
+    uploadFileError.textContent = errorText;
+    uploadFileError.hidden = false;
+    transcribeFileBtn.disabled = false;
+}
+
+async function transcribeSource(sourceTab) {
+    const request = buildTranscriptionRequest(sourceTab);
+    if (!request) return;
+
+    prepareTranscriptionUI(sourceTab);
+    showLoading(request.audioURL);
+
+    try {
+        const resp = await fetch(TRANSCRIPTION_API_URL, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() },
+            body: request.formData,
+        });
+        const data = await resp.json();
+        hideLoading();
+        if (resp.ok) {
+            showResult(data.transcript, request.audioURL, data.filename, data.download_filename, sourceTab);
+        } else {
+            const errorText = sourceTab === 'record'
+                ? 'Upload failed. Please try again.'
+                : 'Upload failed. Check the file format and try again.';
+            restoreTranscriptionUIAfterFailure(sourceTab, errorText);
+        }
+    } catch (err) {
+        hideLoading();
+        restoreTranscriptionUIAfterFailure(sourceTab, `Network error: ${err.message}`);
+    }
 }
 
 function switchTab(tabName) {
@@ -469,42 +553,7 @@ endBtn.addEventListener('click', () => {
 });
 
 uploadBtn.addEventListener('click', async () => {
-    if (!recordedBlob) return;
-
-    const ext = mimeToExtension(activeMime);
-    const formData = new FormData();
-    formData.append('audio_file', recordedBlob, `recording${ext}`);
-    formData.append('model_size', getSelectedModelSize());
-
-    uploadBtn.disabled = true;
-    recordingControls.style.display = 'none';
-    timerDisplay.style.display = 'none';
-    statusMsg.style.display = 'none';
-    showLoading(recordedObjectURL);
-
-    try {
-        const resp = await fetch(TRANSCRIPTION_API_URL, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': getCsrfToken() },
-            body: formData,
-        });
-        const data = await resp.json();
-        hideLoading();
-        if (resp.ok) {
-            showResult(data.transcript, recordedObjectURL, data.filename, data.download_filename, 'record');
-        } else {
-            recordBtn.style.display = '';
-            statusMsg.style.display = '';
-            setStatus('Upload failed. Please try again.', true);
-            uploadBtn.disabled = false;
-        }
-    } catch (err) {
-        hideLoading();
-        recordBtn.style.display = '';
-        statusMsg.style.display = '';
-        setStatus(`Network error: ${err.message}`, true);
-        uploadBtn.disabled = false;
-    }
+    await transcribeSource('record');
 });
 
 // --- Upload tab event listeners ---
@@ -522,37 +571,7 @@ fileInput.addEventListener('change', () => {
 });
 
 transcribeFileBtn.addEventListener('click', async () => {
-    if (!uploadedFile) return;
-
-    const formData = new FormData();
-    formData.append('audio_file', uploadedFile, uploadedFile.name);
-    formData.append('model_size', getSelectedModelSize());
-    transcribeFileBtn.disabled = true;
-    showLoading(uploadedObjectURL);
-
-    try {
-        const resp = await fetch(TRANSCRIPTION_API_URL, {
-            method: 'POST',
-            headers: { 'X-CSRFToken': getCsrfToken() },
-            body: formData,
-        });
-        const data = await resp.json();
-        hideLoading();
-        if (resp.ok) {
-            showResult(data.transcript, uploadedObjectURL, data.filename, data.download_filename, 'upload');
-        } else {
-            panelUpload.hidden = false;
-            uploadFileError.textContent = 'Upload failed. Check the file format and try again.';
-            uploadFileError.hidden = false;
-            transcribeFileBtn.disabled = false;
-        }
-    } catch (err) {
-        hideLoading();
-        panelUpload.hidden = false;
-        uploadFileError.textContent = `Network error: ${err.message}`;
-        uploadFileError.hidden = false;
-        transcribeFileBtn.disabled = false;
-    }
+    await transcribeSource('upload');
 });
 
 // --- Result section ---
@@ -561,6 +580,11 @@ startOverBtn.addEventListener('click', () => {
     clearState();
     panelRecord.hidden = activeTab !== 'record';
     panelUpload.hidden = activeTab !== 'upload';
+});
+
+resultRetryBtn.addEventListener('click', async () => {
+    if (!currentResultSourceTab) return;
+    await transcribeSource(currentResultSourceTab);
 });
 
 resultDownloadBtn.addEventListener('click', async (event) => {

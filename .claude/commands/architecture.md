@@ -62,6 +62,8 @@ def get_model(model_size):
     return _model
 ```
 
+Whisper stores downloaded model weight files on disk using its own cache directory. In this environment, because `XDG_CACHE_HOME` is unset, that resolves to `~/.cache/whisper` (for example `/Users/toddchaney/.cache/whisper`). The `.pt` files live there across app restarts. Separately, this app keeps only one loaded Whisper model object in process memory at a time via `_model` and `_model_size`; restarting Django drops the in-memory model, but does not remove the cached weight files.
+
 `WHISPER_MODEL_SIZE` defaults to `"large"` in settings and is used as the initial dropdown value on each page load. Transcription is synchronous — the HTTP request blocks until Whisper is done, which for the `large` model on long audio can take a minute or more.
 
 ---
@@ -84,7 +86,7 @@ The UI is a single HTML page (`record.html`) with two tab panels — Record and 
 
 3. **Loading state** — both panels are hidden, tabs are disabled, a spinner + elapsed timer + audio player are shown so the user can listen while waiting.
 
-4. **Result state** — transcript text, audio player, copy button, and a Blob-backed ZIP download link are shown. The ZIP always contains `audio.<ext>` and `transcription.txt`. "Record Another" / "Transcribe Another" resets all state and returns to the appropriate tab.
+4. **Result state** — transcript text, audio player, copy button, a Blob-backed ZIP download link, and a retry action are shown. Retry reuses the current in-memory recording or uploaded file and sends it again with whatever Whisper model is currently selected. The ZIP always contains `audio.<ext>` and `transcription.txt`. "Record Another" / "Transcribe Another" resets all state and returns to the appropriate tab.
 
 Audio and transcript are never pushed back to the user's browser from the server after the initial JSON response — everything is held as object URLs in JS memory.
 
