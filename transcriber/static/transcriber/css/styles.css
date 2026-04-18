@@ -24,9 +24,7 @@ body {
 }
 
 header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 0.4rem;
 }
 
 header h1 {
@@ -467,7 +465,6 @@ audio {
 /* Tab navigation */
 .tabs-bar {
     display: flex;
-    border-bottom: 2px solid #e5e5e5;
     margin-bottom: 1.5rem;
 }
 

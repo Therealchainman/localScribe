@@ -45,6 +45,7 @@ const uploadBtn         = document.getElementById('upload-btn');
 const statusMsg         = document.getElementById('status-msg');
 const tabHint           = document.getElementById('tab-hint');
 const loadingDiv        = document.getElementById('loading');
+const loadingAudio      = document.getElementById('loading-audio');
 const transcribeTimer   = document.getElementById('transcription-timer');
 const fileInput         = document.getElementById('file-input');
 const transcribeFileBtn = document.getElementById('transcribe-file-btn');
@@ -124,10 +125,11 @@ function clearState() {
     uploadFileError.textContent = '';
 }
 
-function showLoading() {
+function showLoading(audioURL) {
     panelRecord.hidden = true;
     panelUpload.hidden = true;
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = true; });
+    loadingAudio.src = audioURL || '';
     loadingDiv.style.display = 'block';
     transcribeTimer.textContent = '00:00:00';
     transcribeElapsed = 0;
@@ -340,7 +342,7 @@ uploadBtn.addEventListener('click', async () => {
     recordingControls.style.display = 'none';
     timerDisplay.style.display = 'none';
     statusMsg.style.display = 'none';
-    showLoading();
+    showLoading(recordedObjectURL);
 
     try {
         const resp = await fetch('/api/upload/', {
@@ -387,7 +389,7 @@ transcribeFileBtn.addEventListener('click', async () => {
     const formData = new FormData();
     formData.append('audio_file', uploadedFile, uploadedFile.name);
     transcribeFileBtn.disabled = true;
-    showLoading();
+    showLoading(uploadedObjectURL);
 
     try {
         const resp = await fetch('/api/upload-file/', {
@@ -442,13 +444,6 @@ if (copyBtn) {
     });
 }
 
-// beforeunload guard
-window.addEventListener('beforeunload', (e) => {
-    if (currentPk !== null) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
-});
 
 // --- Tab switching ---
 document.querySelectorAll('.tab-btn').forEach(btn => {
