@@ -161,6 +161,7 @@ button[type="submit"]:disabled {
 }
 
 .transcript-box {
+    position: relative;
     background: #f8f9fa;
     border: 1px solid #e5e5e5;
     border-radius: 6px;
@@ -169,12 +170,97 @@ button[type="submit"]:disabled {
     overflow-x: auto;
 }
 
+.copy-transcript-btn {
+    position: absolute;
+    top: 0.35rem;
+    right: 0.35rem;
+    min-width: 2rem;
+    height: 2rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #666;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    padding: 0 0.55rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.transcript-box:hover .copy-transcript-btn,
+.transcript-box:focus-within .copy-transcript-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.copy-transcript-btn:hover,
+.copy-transcript-btn:focus-visible {
+    background: #4a6cf7;
+    color: #fff;
+    border-color: #4a6cf7;
+    outline: none;
+}
+
+.copy-transcript-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-transcript-icon svg {
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+}
+
+.copy-transcript-status {
+    display: none;
+    white-space: nowrap;
+}
+
+.copy-transcript-btn[data-state="copied"],
+.copy-transcript-btn[data-state="failed"] {
+    min-width: auto;
+    padding: 0 0.65rem;
+}
+
+.copy-transcript-btn[data-state="copied"] {
+    background: #4a6cf7;
+    color: #fff;
+    border-color: #4a6cf7;
+}
+
+.copy-transcript-btn[data-state="failed"] {
+    background: #d32f2f;
+    color: #fff;
+    border-color: #d32f2f;
+}
+
+.copy-transcript-btn[data-state="copied"] .copy-transcript-icon,
+.copy-transcript-btn[data-state="failed"] .copy-transcript-icon {
+    display: none;
+}
+
+.copy-transcript-btn[data-state="copied"] .copy-transcript-status,
+.copy-transcript-btn[data-state="failed"] .copy-transcript-status {
+    display: inline;
+}
+
 .transcript-box pre {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 0.95rem;
     line-height: 1.7;
     white-space: pre-wrap;
     word-wrap: break-word;
+    padding-right: 2.5rem;
 }
 
 .actions {
