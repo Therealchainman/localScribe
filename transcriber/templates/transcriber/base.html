@@ -5,13 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Transcriber{% endblock %}</title>
     {% load static %}
+    <link rel="icon" type="image/png" href="{% static 'transcriber/img/local-scribe-icon.png' %}">
+    <link rel="apple-touch-icon" href="{% static 'transcriber/img/local-scribe-icon.png' %}">
     <link rel="stylesheet" href="{% static 'transcriber/css/styles.css' %}">
     <meta name="theme-color" content="#4a6cf7">
 </head>
 <body>
     <div class="container">
         <header class="site-header">
-            <h1><a href="{% url 'transcriber:record' %}">Local Scribe</a></h1>
+            <h1>
+                <a class="site-brand" href="{% url 'transcriber:record' %}">
+                    <img
+                        class="site-brand__icon"
+                        src="{% static 'transcriber/img/local-scribe-icon.png' %}"
+                        alt="Local Scribe icon"
+                        width="256"
+                        height="256"
+                    >
+                    <span>Local Scribe</span>
+                </a>
+            </h1>
             {% block header_controls %}{% endblock %}
         </header>
         <main>

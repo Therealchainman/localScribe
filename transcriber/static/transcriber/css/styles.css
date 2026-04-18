@@ -40,13 +40,25 @@ header h1 {
     margin-bottom: 0.5rem;
 }
 
-header h1 a {
+.site-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
     color: #1a1a1a;
     text-decoration: none;
 }
 
-header h1 a:hover {
+.site-brand:hover {
     color: #4a6cf7;
+}
+
+.site-brand__icon {
+    width: 6.825rem;
+    height: 6.825rem;
+    border-radius: 0.75rem;
+    display: block;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.16);
 }
 
 .model-selector {
@@ -497,6 +509,15 @@ audio {
 @media (max-width: 640px) {
     .site-header {
         align-items: stretch;
+    }
+
+    .site-brand {
+        gap: 0.6rem;
+    }
+
+    .site-brand__icon {
+        width: 5.985rem;
+        height: 5.985rem;
     }
 
     .model-selector {
