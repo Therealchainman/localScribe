@@ -1,6 +1,6 @@
 {
-  "name": "Importal Transcribe",
-  "short_name": "Transcribe",
+  "name": "Local Scribe",
+  "short_name": "localScribe",
   "description": "Record and transcribe audio using OpenAI Whisper",
   "start_url": "/record/",
   "display": "standalone",

@@ -146,7 +146,6 @@ async function startRecording() {
         audioPreview.src = URL.createObjectURL(recordedBlob);
         audioPreview.hidden = false;
         uploadBtn.disabled = false;
-        setStatus('Recording ready. Preview or upload below.');
     };
 
     mediaRecorder.start();
@@ -212,17 +211,17 @@ uploadBtn.addEventListener('click', async () => {
     formData.append('audio_file', recordedBlob, filename);
 
     uploadBtn.disabled = true;
-    setStatus('Uploading and transcribing\u2026 this may take a moment.');
+    recordBtn.style.display = 'none';
+    timerDisplay.style.display = 'none';
+    statusMsg.style.display = 'none';
 
     loadingDiv.style.display = 'block';
     transcribeTimer.textContent = '00:00:00';
 
     const uploadStart = Date.now();
     elapsed = 0;
-    timerDisplay.textContent = formatTime(0);
     timerInterval = setInterval(() => {
         elapsed++;
-        timerDisplay.textContent = formatTime(elapsed);
         transcribeTimer.textContent = formatTimeLong(elapsed);
     }, 1000);
 
@@ -239,12 +238,18 @@ uploadBtn.addEventListener('click', async () => {
             window.location.href = data.redirect_url + '?t=' + duration;
         } else {
             loadingDiv.style.display = 'none';
+            recordBtn.style.display = '';
+            timerDisplay.style.display = '';
+            statusMsg.style.display = '';
             setStatus(`Upload failed. Please try again.`, true);
             uploadBtn.disabled = false;
         }
     } catch (err) {
         clearInterval(timerInterval);
         loadingDiv.style.display = 'none';
+        recordBtn.style.display = '';
+        timerDisplay.style.display = '';
+        statusMsg.style.display = '';
         setStatus(`Network error: ${err.message}`, true);
         uploadBtn.disabled = false;
     }

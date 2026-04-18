@@ -1,4 +1,4 @@
-# Importal Transcribe
+# Local Scribe
 
 A web application for uploading M4A audio files and generating transcripts using local [OpenAI Whisper](https://github.com/openai/whisper).
 
