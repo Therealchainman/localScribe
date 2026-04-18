@@ -70,12 +70,27 @@ let audioContext     = null;
 
 // --- SPA state ---
 let recordedObjectURL       = null;
-let uploadedFile             = null;
-let uploadedObjectURL        = null;
-let currentPk                = null;
-let transcribeTimerInterval  = null;
-let transcribeElapsed        = 0;
-let skipNextStop             = false;  // guard for async onstop after tab switch
+let uploadedFile            = null;
+let uploadedObjectURL       = null;
+let transcriptDownloadURL   = null;
+let resultAudioFile         = null;
+let isPreparingDownload     = false;
+let transcribeTimerInterval = null;
+let transcribeElapsed       = 0;
+let skipNextStop            = false;  // guard for async onstop after tab switch
+
+const textEncoder = new TextEncoder();
+const crcTable = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let j = 0; j < 8; j++) {
+            c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
 
 // --- Helpers ---
 function formatTime(s) {
@@ -103,21 +118,135 @@ function getSelectedSource() {
     return radio ? radio.value : 'mic';
 }
 
+function revokeTranscriptDownloadURL() {
+    if (!transcriptDownloadURL) return;
+    URL.revokeObjectURL(transcriptDownloadURL);
+    transcriptDownloadURL = null;
+}
+
+function getArchiveAudioFilename(filename) {
+    const dot = filename.lastIndexOf('.');
+    const ext = dot >= 0 ? filename.slice(dot) : '.bin';
+    return `audio${ext}`;
+}
+
+function crc32(bytes) {
+    let crc = 0xFFFFFFFF;
+    for (const byte of bytes) {
+        crc = crcTable[(crc ^ byte) & 0xFF] ^ (crc >>> 8);
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function concatUint8Arrays(parts) {
+    const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+    const out = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const part of parts) {
+        out.set(part, offset);
+        offset += part.length;
+    }
+    return out;
+}
+
+async function createZipBlob(entries) {
+    const localParts = [];
+    const centralParts = [];
+    let offset = 0;
+
+    for (const entry of entries) {
+        const nameBytes = textEncoder.encode(entry.name);
+        const data = new Uint8Array(await entry.blob.arrayBuffer());
+        const header = new Uint8Array(30 + nameBytes.length);
+        const headerView = new DataView(header.buffer);
+        const crc = crc32(data);
+
+        headerView.setUint32(0, 0x04034B50, true);
+        headerView.setUint16(4, 20, true);
+        headerView.setUint16(6, 0, true);
+        headerView.setUint16(8, 0, true);
+        headerView.setUint16(10, 0, true);
+        headerView.setUint16(12, 0, true);
+        headerView.setUint32(14, crc, true);
+        headerView.setUint32(18, data.length, true);
+        headerView.setUint32(22, data.length, true);
+        headerView.setUint16(26, nameBytes.length, true);
+        headerView.setUint16(28, 0, true);
+        header.set(nameBytes, 30);
+        localParts.push(header, data);
+
+        const central = new Uint8Array(46 + nameBytes.length);
+        const centralView = new DataView(central.buffer);
+        centralView.setUint32(0, 0x02014B50, true);
+        centralView.setUint16(4, 20, true);
+        centralView.setUint16(6, 20, true);
+        centralView.setUint16(8, 0, true);
+        centralView.setUint16(10, 0, true);
+        centralView.setUint16(12, 0, true);
+        centralView.setUint16(14, 0, true);
+        centralView.setUint32(16, crc, true);
+        centralView.setUint32(20, data.length, true);
+        centralView.setUint32(24, data.length, true);
+        centralView.setUint16(28, nameBytes.length, true);
+        centralView.setUint16(30, 0, true);
+        centralView.setUint16(32, 0, true);
+        centralView.setUint16(34, 0, true);
+        centralView.setUint16(36, 0, true);
+        centralView.setUint32(38, 0, true);
+        centralView.setUint32(42, offset, true);
+        central.set(nameBytes, 46);
+        centralParts.push(central);
+
+        offset += header.length + data.length;
+    }
+
+    const centralDirectory = concatUint8Arrays(centralParts);
+    const end = new Uint8Array(22);
+    const endView = new DataView(end.buffer);
+    endView.setUint32(0, 0x06054B50, true);
+    endView.setUint16(4, 0, true);
+    endView.setUint16(6, 0, true);
+    endView.setUint16(8, entries.length, true);
+    endView.setUint16(10, entries.length, true);
+    endView.setUint32(12, centralDirectory.length, true);
+    endView.setUint32(16, offset, true);
+    endView.setUint16(20, 0, true);
+
+    return new Blob([...localParts, centralDirectory, end], { type: 'application/zip' });
+}
+
+async function ensureTranscriptDownload(filename, transcript) {
+    if (transcriptDownloadURL) return transcriptDownloadURL;
+    if (!resultAudioFile) throw new Error('No audio available for download.');
+
+    const transcriptText = transcript.endsWith('\n') ? transcript : `${transcript}\n`;
+    const zipBlob = await createZipBlob([
+        { name: getArchiveAudioFilename(filename), blob: resultAudioFile },
+        { name: 'transcription.txt', blob: new Blob([transcriptText], { type: 'text/plain;charset=utf-8' }) },
+    ]);
+
+    transcriptDownloadURL = URL.createObjectURL(zipBlob);
+    return transcriptDownloadURL;
+}
+
 // --- State management ---
 function clearState() {
     // Revoke object URLs before nulling them
     resultAudio.src = '';
     if (recordedObjectURL) { URL.revokeObjectURL(recordedObjectURL); recordedObjectURL = null; }
     if (uploadedObjectURL) { URL.revokeObjectURL(uploadedObjectURL); uploadedObjectURL = null; }
+    revokeTranscriptDownloadURL();
     recordedBlob = null;
     uploadedFile = null;
-    currentPk = null;
+    resultAudioFile = null;
+    isPreparingDownload = false;
     // Reset result section
     resultSection.hidden = true;
     resultTranscript.textContent = '';
     resultFilename.textContent = '';
     resultMeta.textContent = '';
     resultDownloadBtn.href = '#';
+    resultDownloadBtn.removeAttribute('download');
     // Reset upload tab
     fileInput.value = '';
     transcribeFileBtn.disabled = true;
@@ -146,13 +275,13 @@ function hideLoading() {
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = false; });
 }
 
-function showResult(transcript, audioObjectURL, pk, filename, sourceTab) {
-    currentPk = pk;
+function showResult(transcript, audioObjectURL, filename, downloadFilename, sourceTab) {
     resultFilename.textContent = filename;
     resultMeta.textContent = `Transcribed in ${formatTimeLong(transcribeElapsed)}`;
     resultTranscript.textContent = transcript;
     resultAudio.src = audioObjectURL;
-    resultDownloadBtn.href = `/download/${pk}/`;
+    resultAudioFile = sourceTab === 'record' ? recordedBlob : uploadedFile;
+    resultDownloadBtn.dataset.filename = downloadFilename;
     startOverBtn.textContent = sourceTab === 'record' ? 'Record Another' : 'Transcribe Another';
     resultSection.hidden = false;
 }
@@ -353,7 +482,7 @@ uploadBtn.addEventListener('click', async () => {
         const data = await resp.json();
         hideLoading();
         if (resp.ok) {
-            showResult(data.transcript, recordedObjectURL, data.pk, data.filename, 'record');
+            showResult(data.transcript, recordedObjectURL, data.filename, data.download_filename, 'record');
         } else {
             recordBtn.style.display = '';
             statusMsg.style.display = '';
@@ -400,7 +529,7 @@ transcribeFileBtn.addEventListener('click', async () => {
         const data = await resp.json();
         hideLoading();
         if (resp.ok) {
-            showResult(data.transcript, uploadedObjectURL, data.pk, data.filename, 'upload');
+            showResult(data.transcript, uploadedObjectURL, data.filename, data.download_filename, 'upload');
         } else {
             panelUpload.hidden = false;
             uploadFileError.textContent = 'Upload failed. Check the file format and try again.';
@@ -422,6 +551,35 @@ startOverBtn.addEventListener('click', () => {
     clearState();
     panelRecord.hidden = activeTab !== 'record';
     panelUpload.hidden = activeTab !== 'upload';
+});
+
+resultDownloadBtn.addEventListener('click', async (event) => {
+    event.preventDefault();
+    if (isPreparingDownload) return;
+
+    isPreparingDownload = true;
+    const originalLabel = resultDownloadBtn.textContent;
+    resultDownloadBtn.textContent = 'Preparing...';
+
+    try {
+        const archiveURL = await ensureTranscriptDownload(
+            resultFilename.textContent,
+            resultTranscript.textContent,
+        );
+        resultDownloadBtn.href = archiveURL;
+        const tempLink = document.createElement('a');
+        tempLink.href = archiveURL;
+        tempLink.download = resultDownloadBtn.dataset.filename || 'transcript.zip';
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        tempLink.remove();
+    } catch (err) {
+        setStatus(`Download failed: ${err.message}`, true);
+        statusMsg.style.display = '';
+    } finally {
+        resultDownloadBtn.textContent = originalLabel;
+        isPreparingDownload = false;
+    }
 });
 
 // Copy button

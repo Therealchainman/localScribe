@@ -1,14 +1,12 @@
-import io
 import os
-import time
-import zipfile
+import tempfile
+from pathlib import Path
 
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.http import require_POST
 
 from .forms import AudioUploadForm
-from .models import Transcript
 from .services import transcribe_audio
 
 
@@ -16,64 +14,51 @@ def main_view(request, default_tab='record'):
     return render(request, 'transcriber/record.html', {'default_tab': default_tab})
 
 
+def _download_filename(original_filename: str) -> str:
+    stem = Path(original_filename).stem or 'transcript'
+    return f'{stem}.zip'
+
+
+def _transcribe_uploaded_file(uploaded_file):
+    original_filename = uploaded_file.name or 'audio'
+    suffix = Path(original_filename).suffix or '.tmp'
+    temp_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+            for chunk in uploaded_file.chunks():
+                temp_file.write(chunk)
+            temp_path = temp_file.name
+
+        result = transcribe_audio(temp_path)
+        return {
+            'transcript': result['text'],
+            'filename': original_filename,
+            'download_filename': _download_filename(original_filename),
+            'language': result.get('language', 'unknown'),
+        }
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            os.unlink(temp_path)
+
+
+def _handle_upload(request):
+    form = AudioUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return JsonResponse({'error': form.errors.as_json()}, status=400)
+
+    try:
+        payload = _transcribe_uploaded_file(form.cleaned_data['audio_file'])
+    except Exception as exc:
+        return JsonResponse({'error': f'Transcription failed: {exc}'}, status=500)
+    return JsonResponse(payload)
+
+
 @require_POST
 def record_upload_view(request):
-    form = AudioUploadForm(request.POST, request.FILES)
-    if form.is_valid():
-        audio_file = form.cleaned_data['audio_file']
-        transcript = Transcript.objects.create(
-            audio_file=audio_file,
-            original_filename=audio_file.name,
-        )
-        result = transcribe_audio(transcript.audio_file.path)
-        transcript.transcript_text = result['text']
-        transcript.save()
-        return JsonResponse({
-            'transcript': transcript.transcript_text,
-            'filename': transcript.original_filename,
-            'pk': transcript.pk,
-        })
-    return JsonResponse({'error': form.errors.as_json()}, status=400)
+    return _handle_upload(request)
 
 
 @require_POST
 def api_upload_file_view(request):
-    form = AudioUploadForm(request.POST, request.FILES)
-    if form.is_valid():
-        audio_file = form.cleaned_data['audio_file']
-        transcript = Transcript.objects.create(
-            audio_file=audio_file,
-            original_filename=audio_file.name,
-        )
-        result = transcribe_audio(transcript.audio_file.path)
-        transcript.transcript_text = result['text']
-        transcript.save()
-        return JsonResponse({
-            'transcript': transcript.transcript_text,
-            'filename': transcript.original_filename,
-            'pk': transcript.pk,
-        })
-    return JsonResponse({'error': form.errors.as_json()}, status=400)
-
-
-def result_view(request, pk):
-    transcript = get_object_or_404(Transcript, pk=pk)
-    return render(request, 'transcriber/result.html', {'transcript': transcript})
-
-
-def download_view(request, pk):
-    transcript = get_object_or_404(Transcript, pk=pk)
-
-    _, audio_ext = os.path.splitext(transcript.audio_file.name)
-
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        with transcript.audio_file.open('rb') as af:
-            zf.writestr(f'audio{audio_ext}', af.read())
-        zf.writestr('transcript.txt', transcript.transcript_text)
-
-    buffer.seek(0)
-    response = HttpResponse(buffer.read(), content_type='application/zip')
-    base_name = transcript.original_filename.rsplit('.', 1)[0]
-    response['Content-Disposition'] = f'attachment; filename="{base_name}.zip"'
-    return response
+    return _handle_upload(request)

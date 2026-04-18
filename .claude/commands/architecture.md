@@ -4,7 +4,7 @@ Describe the architecture of the Local Scribe web application. Use the context b
 
 ## High-level overview
 
-Local Scribe is a **single-page, privacy-first audio transcription tool**. The user records audio directly in the browser (or uploads a file), the audio is sent to a local Django server, transcribed on-device using OpenAI Whisper, and the transcript is returned and displayed — all without any third-party cloud services. Audio and transcript data live in the browser session; closing the tab discards them.
+Local Scribe is a **single-page, privacy-first audio transcription tool**. The user records audio directly in the browser (or uploads a file), the audio is sent to a local Django server, transcribed on-device using OpenAI Whisper, and the transcript is returned and displayed — all without any third-party cloud services. Audio is written to a temporary file only for the duration of transcription, and transcript data lives in the browser session; closing or refreshing the tab discards it.
 
 ---
 
@@ -14,7 +14,6 @@ Local Scribe is a **single-page, privacy-first audio transcription tool**. The u
 |---|---|
 | Backend framework | Django 5.x (Python) |
 | Transcription engine | OpenAI Whisper (`large` model by default) |
-| Database | SQLite (`db.sqlite3`) |
 | Frontend | Vanilla JS + Django templates (no framework) |
 | Styling | Plain CSS (`styles.css`) |
 
@@ -25,30 +24,13 @@ Local Scribe is a **single-page, privacy-first audio transcription tool**. The u
 ```
 transcribe_project/   ← Django project config (settings, root URLs, WSGI)
 transcriber/          ← single Django app containing all app logic
-  models.py           ← Transcript model
   views.py            ← all request handlers
   services.py         ← Whisper model loading and transcription
   urls.py             ← app-level URL routing
   forms.py            ← AudioUploadForm (file validation)
-  templates/          ← base.html + record.html (SPA shell) + result.html
+  templates/          ← base.html + record.html (SPA shell)
   static/             ← styles.css + recorder.js
 ```
-
----
-
-## Data model
-
-A single model: `Transcript`
-
-```python
-class Transcript(models.Model):
-    audio_file       = FileField(upload_to='uploads/')   # saved to media/uploads/
-    original_filename = CharField(max_length=255)
-    transcript_text  = TextField(blank=True)
-    created_at       = DateTimeField(auto_now_add=True)
-```
-
-Every upload (record or file) creates a `Transcript` row. The audio file is persisted to disk under `media/uploads/`. The transcript text is written back to the same row after Whisper finishes.
 
 ---
 
@@ -60,10 +42,8 @@ Every upload (record or file) creates a `Transcript` row. The audio file is pers
 | GET | `/upload/` | Main SPA (Upload tab pre-selected) |
 | POST | `/api/upload/` | Receive recorded audio blob → transcribe |
 | POST | `/api/upload-file/` | Receive uploaded file → transcribe |
-| GET | `/result/<pk>/` | Server-rendered result page (legacy) |
-| GET | `/download/<pk>/` | Download transcript as `.txt` |
 
-Both POST API endpoints share identical logic (accept file, create `Transcript`, run Whisper, return JSON). They are separate routes because the record and upload tabs were originally distinct pages.
+Both POST API endpoints share identical logic (accept file, write it to a temporary file, run Whisper, return JSON). They are separate routes because the record and upload tabs were originally distinct pages.
 
 ---
 
@@ -94,7 +74,7 @@ The UI is a single HTML page (`record.html`) with two tab panels — Record and 
 **Key state variables:**
 - `recordedBlob` / `recordedObjectURL` — in-memory audio from the MediaRecorder
 - `uploadedFile` / `uploadedObjectURL` — file selected via the file input
-- `currentPk` — the DB primary key of the active transcript (used for the download link)
+- `transcriptDownloadURL` — Blob URL for the generated ZIP download
 
 **Key flows:**
 
@@ -104,7 +84,7 @@ The UI is a single HTML page (`record.html`) with two tab panels — Record and 
 
 3. **Loading state** — both panels are hidden, tabs are disabled, a spinner + elapsed timer + audio player are shown so the user can listen while waiting.
 
-4. **Result state** — transcript text, audio player, copy button, and download link are shown. "Record Another" / "Transcribe Another" resets all state and returns to the appropriate tab.
+4. **Result state** — transcript text, audio player, copy button, and a Blob-backed ZIP download link are shown. The ZIP always contains `audio.<ext>` and `transcription.txt`. "Record Another" / "Transcribe Another" resets all state and returns to the appropriate tab.
 
 Audio and transcript are never pushed back to the user's browser from the server after the initial JSON response — everything is held as object URLs in JS memory.
 
@@ -114,5 +94,4 @@ Audio and transcript are never pushed back to the user's browser from the server
 
 - `WHISPER_MODEL_SIZE = 'large'` — can be changed to `tiny`/`base`/`small`/`medium` for speed/accuracy tradeoff
 - `DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600` — 100 MB upload cap
-- `MEDIA_ROOT = BASE_DIR / 'media'` — audio files land here on disk
-- No auth, no sessions, no caching middleware — intentionally minimal for local use
+- No database, media storage, auth, sessions, or caching middleware — intentionally minimal for local use
