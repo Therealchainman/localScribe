@@ -33,12 +33,15 @@ function getCsrfToken() {
     return input ? input.value : '';
 }
 
-const recordBtn    = document.getElementById('record-btn');
-const timerDisplay = document.getElementById('timer');
-const audioPreview = document.getElementById('audio-preview');
-const uploadBtn    = document.getElementById('upload-btn');
-const statusMsg    = document.getElementById('status-msg');
-const tabHint      = document.getElementById('tab-hint');
+const recordBtn         = document.getElementById('record-btn');
+const recordingControls = document.getElementById('recording-controls');
+const pauseBtn          = document.getElementById('pause-btn');
+const endBtn            = document.getElementById('end-btn');
+const timerDisplay      = document.getElementById('timer');
+const audioPreview      = document.getElementById('audio-preview');
+const uploadBtn         = document.getElementById('upload-btn');
+const statusMsg         = document.getElementById('status-msg');
+const tabHint           = document.getElementById('tab-hint');
 
 let mediaRecorder    = null;
 let chunks           = [];
@@ -157,9 +160,10 @@ async function startRecording() {
         timerDisplay.textContent = formatTime(elapsed);
     }, 1000);
 
-    recordBtn.textContent = 'Stop';
-    recordBtn.classList.add('recording');
-    recordBtn.setAttribute('aria-label', 'Stop recording');
+    recordBtn.style.display = 'none';
+    recordingControls.style.display = 'flex';
+    pauseBtn.textContent = 'Pause';
+    timerDisplay.style.display = '';
     uploadBtn.disabled = true;
     audioPreview.hidden = true;
     setStatus('Recording\u2026');
@@ -177,17 +181,38 @@ function stopRecording() {
         audioContext = null;
     }
     clearInterval(timerInterval);
-    recordBtn.textContent = 'Record';
-    recordBtn.classList.remove('recording');
-    recordBtn.setAttribute('aria-label', 'Start recording');
+    timerInterval = null;
+    recordingControls.style.display = 'none';
+    recordBtn.style.display = '';
+    timerDisplay.style.display = 'none';
+    setStatus('Recording ended. Preview below or start a new recording.');
 }
 
 recordBtn.addEventListener('click', () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopRecording();
-    } else {
-        startRecording();
+    startRecording();
+});
+
+pauseBtn.addEventListener('click', () => {
+    if (!mediaRecorder) return;
+    if (mediaRecorder.state === 'recording') {
+        mediaRecorder.pause();
+        clearInterval(timerInterval);
+        timerInterval = null;
+        pauseBtn.textContent = 'Resume';
+        setStatus('Paused');
+    } else if (mediaRecorder.state === 'paused') {
+        mediaRecorder.resume();
+        timerInterval = setInterval(() => {
+            elapsed++;
+            timerDisplay.textContent = formatTime(elapsed);
+        }, 1000);
+        pauseBtn.textContent = 'Pause';
+        setStatus('Recording\u2026');
     }
+});
+
+endBtn.addEventListener('click', () => {
+    stopRecording();
 });
 
 const loadingDiv    = document.getElementById('loading');
@@ -212,6 +237,7 @@ uploadBtn.addEventListener('click', async () => {
 
     uploadBtn.disabled = true;
     recordBtn.style.display = 'none';
+    recordingControls.style.display = 'none';
     timerDisplay.style.display = 'none';
     statusMsg.style.display = 'none';
 

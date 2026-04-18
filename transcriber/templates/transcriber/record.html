@@ -16,7 +16,11 @@
         In the browser prompt, select a tab and enable &ldquo;Share audio&rdquo; (or &ldquo;Share tab audio&rdquo;).
     </p>
     <button id="record-btn" class="record-btn" aria-label="Start recording">Record</button>
-    <div id="timer" class="timer" aria-live="polite">00:00</div>
+    <div id="recording-controls" class="recording-controls" style="display: none;">
+        <button id="pause-btn" class="pause-btn">Pause</button>
+        <button id="end-btn" class="end-btn">End Recording</button>
+    </div>
+    <div id="timer" class="timer" aria-live="polite" style="display: none;">00:00</div>
     <p id="status-msg" class="status-msg" aria-live="polite">Press Record to start.</p>
     <audio id="audio-preview" controls hidden></audio>
     <button id="upload-btn" class="upload-btn" disabled>Upload &amp; Transcribe</button>

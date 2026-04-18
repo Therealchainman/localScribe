@@ -407,6 +407,42 @@ audio {
     margin-top: 0.5rem;
 }
 
+.recording-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.pause-btn,
+.end-btn {
+    padding: 0.65rem 1.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    min-width: 130px;
+}
+
+.pause-btn {
+    color: #333;
+    background-color: #e5e5e5;
+}
+
+.pause-btn:hover {
+    background-color: #d5d5d5;
+}
+
+.end-btn {
+    color: #fff;
+    background-color: #d32f2f;
+}
+
+.end-btn:hover {
+    background-color: #b71c1c;
+}
+
 .upload-btn {
     padding: 0.75rem 2.5rem;
     font-size: 1rem;
