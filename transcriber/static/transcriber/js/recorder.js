@@ -235,7 +235,7 @@ uploadBtn.addEventListener('click', async () => {
         clearInterval(timerInterval);
         if (resp.ok && data.redirect_url) {
             const duration = Math.round((Date.now() - uploadStart) / 1000);
-            window.location.href = data.redirect_url + '?t=' + duration;
+            window.location.href = data.redirect_url + '?t=' + duration + '&source=record';
         } else {
             loadingDiv.style.display = 'none';
             recordBtn.style.display = '';
