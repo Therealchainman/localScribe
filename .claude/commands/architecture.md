@@ -38,8 +38,7 @@ transcriber/          ← single Django app containing all app logic
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/` | Main SPA (Record tab) |
-| GET | `/upload/` | Main SPA (Upload tab pre-selected) |
+| GET | `/` | Main SPA |
 | POST | `/api/upload/` | Receive any audio file or recorded blob → transcribe |
 
 ---
@@ -62,7 +61,7 @@ def get_model(model_size):
     return _model
 ```
 
-Whisper stores downloaded model weight files on disk using its own cache directory. In this environment, because `XDG_CACHE_HOME` is unset, that resolves to `~/.cache/whisper` (for example `/Users/toddchaney/.cache/whisper`). The `.pt` files live there across app restarts. Separately, this app keeps only one loaded Whisper model object in process memory at a time via `_model` and `_model_size`; restarting Django drops the in-memory model, but does not remove the cached weight files.
+Whisper stores downloaded model weight files on disk using its own cache directory. When `XDG_CACHE_HOME` is unset, Whisper defaults to `~/.cache/whisper`. Those `.pt` files persist across app restarts. Separately, this app keeps one current loaded Whisper model reference in process memory via `_model` and `_model_size`; restarting Django drops the in-memory model, but does not remove the cached weight files.
 
 `WHISPER_MODEL_SIZE` defaults to `"large"` in settings and is used as the initial dropdown value on each page load. Transcription is synchronous — the HTTP request blocks until Whisper is done, which for the `large` model on long audio can take a minute or more.
 

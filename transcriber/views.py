@@ -11,10 +11,9 @@ from .forms import AudioUploadForm
 from .services import WHISPER_MODEL_SIZES, resolve_model_size, transcribe_audio
 
 
-def main_view(request, default_tab='record'):
+def main_view(request):
     default_model_size = resolve_model_size(settings.WHISPER_MODEL_SIZE)
     return render(request, 'transcriber/record.html', {
-        'default_tab': default_tab,
         'default_whisper_model': default_model_size,
         'whisper_model_sizes': WHISPER_MODEL_SIZES,
     })

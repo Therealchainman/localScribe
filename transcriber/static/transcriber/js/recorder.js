@@ -641,8 +641,3 @@ if (copyBtn) {
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 });
-
-// Initialize from server-provided default tab
-if (typeof DEFAULT_TAB !== 'undefined' && DEFAULT_TAB === 'upload') {
-    switchTab('upload');
-}

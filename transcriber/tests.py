@@ -132,6 +132,11 @@ class PageTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'rel="manifest"', html=False)
 
+    def test_removed_upload_page_route_returns_404(self):
+        response = self.client.get('/upload/')
+
+        self.assertEqual(response.status_code, 404)
+
     def test_main_page_renders_whisper_model_selector_with_large_selected(self):
         response = self.client.get('/')
 
@@ -149,6 +154,7 @@ class PageTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="result-retry-btn"', html=False)
         self.assertContains(response, '>Retry</button>', html=False)
+        self.assertNotContains(response, 'DEFAULT_TAB', html=False)
 
 
 class ServiceTests(SimpleTestCase):
