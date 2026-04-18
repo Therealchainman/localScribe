@@ -23,12 +23,26 @@
 <div id="loading" style="display: none;">
     <div class="spinner"></div>
     <p>Transcribing audio... This may take a minute for longer files.</p>
+    <p id="transcription-timer" style="font-size: 1.1em; color: #555; font-variant-numeric: tabular-nums;">00:00:00</p>
 </div>
 <script>
 document.getElementById('upload-form').addEventListener('submit', function() {
     document.getElementById('submit-btn').disabled = true;
     document.getElementById('submit-btn').textContent = 'Processing...';
     document.getElementById('loading').style.display = 'block';
+
+    var seconds = 0;
+    var timerEl = document.getElementById('transcription-timer');
+    setInterval(function() {
+        seconds++;
+        var h = Math.floor(seconds / 3600);
+        var m = Math.floor((seconds % 3600) / 60);
+        var s = seconds % 60;
+        timerEl.textContent =
+            String(h).padStart(2, '0') + ':' +
+            String(m).padStart(2, '0') + ':' +
+            String(s).padStart(2, '0');
+    }, 1000);
 });
 </script>
 {% endblock %}

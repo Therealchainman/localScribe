@@ -6,11 +6,25 @@
 {% block content %}
 <h2>Record Audio</h2>
 <div class="recorder">
+    <fieldset class="source-selector">
+        <legend>Audio Source</legend>
+        <label><input type="radio" name="audio-source" value="mic" checked> Microphone</label>
+        <label><input type="radio" name="audio-source" value="tab"> Tab Audio</label>
+        <label><input type="radio" name="audio-source" value="both"> Microphone + Tab</label>
+    </fieldset>
+    <p id="tab-hint" class="hint" hidden>
+        In the browser prompt, select a tab and enable &ldquo;Share audio&rdquo; (or &ldquo;Share tab audio&rdquo;).
+    </p>
     <button id="record-btn" class="record-btn" aria-label="Start recording">Record</button>
     <div id="timer" class="timer" aria-live="polite">00:00</div>
     <p id="status-msg" class="status-msg" aria-live="polite">Press Record to start.</p>
     <audio id="audio-preview" controls hidden></audio>
     <button id="upload-btn" class="upload-btn" disabled>Upload &amp; Transcribe</button>
+</div>
+<div id="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Transcribing audio... This may take a minute for longer files.</p>
+    <p id="transcription-timer" style="font-size: 1.1em; color: #555; font-variant-numeric: tabular-nums;">00:00:00</p>
 </div>
 
 {% csrf_token %}

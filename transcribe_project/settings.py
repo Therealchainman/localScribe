@@ -94,7 +94,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Whisper model size: tiny, base, small, medium, large
-WHISPER_MODEL_SIZE = 'small'
+WHISPER_MODEL_SIZE = 'large'
 
 # Max upload size: 100 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600

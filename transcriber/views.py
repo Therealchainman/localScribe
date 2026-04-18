@@ -1,3 +1,5 @@
+import time
+
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -17,10 +19,13 @@ def upload_view(request):
                 audio_file=audio_file,
                 original_filename=audio_file.name,
             )
+            t0 = time.time()
             result = transcribe_audio(transcript.audio_file.path)
+            elapsed = round(time.time() - t0)
             transcript.transcript_text = result['text']
             transcript.save()
-            return redirect('transcriber:result', pk=transcript.pk)
+            url = reverse('transcriber:result', kwargs={'pk': transcript.pk})
+            return redirect(f'{url}?t={elapsed}')
     else:
         form = AudioUploadForm()
     return render(request, 'transcriber/upload.html', {'form': form})

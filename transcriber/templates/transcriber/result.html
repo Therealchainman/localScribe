@@ -5,6 +5,7 @@
 {% block content %}
 <h2>{{ transcript.original_filename }}</h2>
 <p class="meta">Transcribed on {{ transcript.created_at|date:"N j, Y g:i A" }}</p>
+<audio controls src="{{ transcript.audio_file.url }}" style="width:100%;margin-bottom:1.5rem;"></audio>
 <div class="transcript-box">
     <pre>{{ transcript.transcript_text }}</pre>
 </div>
@@ -12,4 +13,16 @@
     <a href="{% url 'transcriber:download' pk=transcript.pk %}" class="btn">Download .txt</a>
     <a href="{% url 'transcriber:upload' %}" class="btn btn-secondary">Transcribe Another</a>
 </div>
+<script>
+  const t = parseInt(new URLSearchParams(window.location.search).get('t'), 10);
+  if (t >= 0) {
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = t % 60;
+    const fmt = String(h).padStart(2, '0') + ':' +
+                String(m).padStart(2, '0') + ':' +
+                String(s).padStart(2, '0');
+    document.querySelector('.meta').textContent += ' \u00b7 Transcribed in ' + fmt;
+  }
+</script>
 {% endblock %}
