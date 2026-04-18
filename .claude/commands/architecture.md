@@ -27,7 +27,7 @@ transcriber/          ← single Django app containing all app logic
   views.py            ← all request handlers
   services.py         ← Whisper model loading and transcription
   urls.py             ← app-level URL routing
-  forms.py            ← AudioUploadForm (file validation)
+  forms.py            ← AudioUploadForm (server-side file validation only)
   templates/          ← base.html + record.html (SPA shell)
   static/             ← styles.css + recorder.js
 ```

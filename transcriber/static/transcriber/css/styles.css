@@ -32,25 +32,6 @@ header h1 {
     margin-bottom: 0.5rem;
 }
 
-.site-nav {
-    display: flex;
-    gap: 1rem;
-}
-
-.nav-link {
-    font-size: 0.9rem;
-    color: #555;
-    text-decoration: none;
-    padding: 0.2rem 0;
-    border-bottom: 2px solid transparent;
-}
-
-.nav-link:hover,
-.nav-link.active {
-    color: #4a6cf7;
-    border-bottom-color: #4a6cf7;
-}
-
 header h1 a {
     color: #1a1a1a;
     text-decoration: none;
@@ -96,38 +77,6 @@ h2 {
     font-size: 0.85rem;
     color: #666;
     margin-top: 0.5rem;
-}
-
-.error-list {
-    list-style: none;
-    margin-top: 0.5rem;
-}
-
-.error-list li {
-    color: #d32f2f;
-    font-size: 0.9rem;
-}
-
-button[type="submit"] {
-    display: inline-block;
-    padding: 0.75rem 2rem;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #fff;
-    background-color: #4a6cf7;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-button[type="submit"]:hover {
-    background-color: #3a5ce5;
-}
-
-button[type="submit"]:disabled {
-    background-color: #999;
-    cursor: not-allowed;
 }
 
 #loading {
@@ -364,21 +313,6 @@ button[type="submit"]:disabled {
 
 .record-btn:active {
     transform: scale(0.96);
-}
-
-.record-btn.recording {
-    background-color: #d32f2f;
-    box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35);
-    animation: pulse 1.4s ease-in-out infinite;
-}
-
-.record-btn.recording:hover {
-    background-color: #b71c1c;
-}
-
-@keyframes pulse {
-    0%, 100% { box-shadow: 0 4px 12px rgba(211, 47, 47, 0.35); }
-    50%       { box-shadow: 0 4px 24px rgba(211, 47, 47, 0.65); }
 }
 
 .timer {

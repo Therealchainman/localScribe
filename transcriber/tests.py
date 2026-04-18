@@ -22,7 +22,7 @@ class UploadApiTests(SimpleTestCase):
         self.assertNotIn('pk', response.json())
 
     def test_uploaded_file_returns_ephemeral_json_without_pk(self):
-        upload = SimpleUploadedFile('meeting.mp3', b'fake-audio', content_type='audio/mpeg')
+        upload = SimpleUploadedFile('meeting.mp4', b'fake-audio', content_type='audio/mp4')
 
         with patch('transcriber.views.transcribe_audio', return_value={'text': 'uploaded text', 'language': 'en'}):
             response = self.client.post('/api/upload/', {'audio_file': upload})
@@ -30,7 +30,7 @@ class UploadApiTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {
             'transcript': 'uploaded text',
-            'filename': 'meeting.mp3',
+            'filename': 'meeting.mp4',
             'download_filename': 'meeting.zip',
             'language': 'en',
         })
@@ -83,3 +83,11 @@ class UploadApiTests(SimpleTestCase):
         response = self.client.post('/api/upload-file/', {'audio_file': upload})
 
         self.assertEqual(response.status_code, 404)
+
+
+class PageTests(SimpleTestCase):
+    def test_main_page_does_not_link_a_manifest(self):
+        response = self.client.get('/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'rel="manifest"', html=False)

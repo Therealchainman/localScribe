@@ -13,15 +13,9 @@ ALLOWED_TYPES = [
     'audio/mpeg', 'audio/mp3',
 ]
 
-ACCEPT_ATTR = '.m4a,.mov,.mp4,.webm,.ogg,.wav,.mp3,audio/*,video/quicktime,video/webm'
-
 
 class AudioUploadForm(forms.Form):
-    audio_file = forms.FileField(
-        label='Select an audio file',
-        help_text='Accepted formats: .m4a, .mov, .webm, .ogg, .wav, .mp3. Maximum size: 100 MB.',
-        widget=forms.ClearableFileInput(attrs={'accept': ACCEPT_ATTR}),
-    )
+    audio_file = forms.FileField()
 
     def clean_audio_file(self):
         f = self.cleaned_data['audio_file']

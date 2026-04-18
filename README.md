@@ -1,6 +1,6 @@
 # Local Scribe
 
-A web application for uploading M4A audio files and generating transcripts using local [OpenAI Whisper](https://github.com/openai/whisper).
+A web application for recording audio in the browser or uploading audio/video files and generating transcripts with local [OpenAI Whisper](https://github.com/openai/whisper).
 
 Built with Django. Transcription runs locally — no API keys required.
 
@@ -18,7 +18,7 @@ brew install ffmpeg
 ## Setup
 
 ```bash
-cd importal-transcribe
+cd local-scribe
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -28,17 +28,17 @@ pip install -r requirements.txt
 
 ```bash
 source .venv/bin/activate
-python manage.py runserver
+python3 manage.py runserver
 ```
 
 Open http://127.0.0.1:8000/ in your browser.
 
 ## Usage
 
-1. Select an M4A audio file and click **Transcribe**
-2. Wait for the transcript to generate (the first run downloads the Whisper model ~140MB)
-3. View the transcript directly in the browser
-4. Click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`
+1. Record audio in the browser, or select an audio/video file to upload.
+2. Click **Upload & Transcribe** or **Transcribe**.
+3. Wait for the transcript to generate; the first run downloads the configured Whisper model.
+4. Review the transcript in the browser, then click **Download** to save a ZIP containing `audio.<ext>` and `transcription.txt`.
 
 ## Configuration
 
