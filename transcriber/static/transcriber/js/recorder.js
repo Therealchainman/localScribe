@@ -7,6 +7,7 @@ const MIME_PREFERENCE = [
     'audio/ogg',
     'audio/mp4',
 ];
+const TRANSCRIPTION_API_URL = typeof API_UPLOAD_URL !== 'undefined' ? API_UPLOAD_URL : '/api/upload/';
 
 function getSupportedMimeType() {
     for (const type of MIME_PREFERENCE) {
@@ -474,7 +475,7 @@ uploadBtn.addEventListener('click', async () => {
     showLoading(recordedObjectURL);
 
     try {
-        const resp = await fetch('/api/upload/', {
+        const resp = await fetch(TRANSCRIPTION_API_URL, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrfToken() },
             body: formData,
@@ -521,7 +522,7 @@ transcribeFileBtn.addEventListener('click', async () => {
     showLoading(uploadedObjectURL);
 
     try {
-        const resp = await fetch('/api/upload-file/', {
+        const resp = await fetch(TRANSCRIPTION_API_URL, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrfToken() },
             body: formData,

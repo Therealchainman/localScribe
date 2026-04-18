@@ -21,11 +21,11 @@ class UploadApiTests(SimpleTestCase):
         })
         self.assertNotIn('pk', response.json())
 
-    def test_upload_file_returns_ephemeral_json_without_pk(self):
+    def test_uploaded_file_returns_ephemeral_json_without_pk(self):
         upload = SimpleUploadedFile('meeting.mp3', b'fake-audio', content_type='audio/mpeg')
 
         with patch('transcriber.views.transcribe_audio', return_value={'text': 'uploaded text', 'language': 'en'}):
-            response = self.client.post('/api/upload-file/', {'audio_file': upload})
+            response = self.client.post('/api/upload/', {'audio_file': upload})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {
@@ -72,7 +72,14 @@ class UploadApiTests(SimpleTestCase):
     def test_invalid_upload_returns_validation_error(self):
         upload = SimpleUploadedFile('notes.txt', b'not-audio', content_type='text/plain')
 
-        response = self.client.post('/api/upload-file/', {'audio_file': upload})
+        response = self.client.post('/api/upload/', {'audio_file': upload})
 
         self.assertEqual(response.status_code, 400)
         self.assertIn('error', response.json())
+
+    def test_removed_upload_file_route_returns_404(self):
+        upload = SimpleUploadedFile('meeting.mp3', b'fake-audio', content_type='audio/mpeg')
+
+        response = self.client.post('/api/upload-file/', {'audio_file': upload})
+
+        self.assertEqual(response.status_code, 404)

@@ -55,10 +55,5 @@ def _handle_upload(request):
 
 
 @require_POST
-def record_upload_view(request):
-    return _handle_upload(request)
-
-
-@require_POST
-def api_upload_file_view(request):
+def api_upload_view(request):
     return _handle_upload(request)

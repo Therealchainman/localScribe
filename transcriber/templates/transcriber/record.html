@@ -78,5 +78,6 @@
 
 {% csrf_token %}
 <script>const DEFAULT_TAB = '{{ default_tab }}';</script>
+<script>const API_UPLOAD_URL = "{% url 'transcriber:api_upload' %}";</script>
 <script src="{% static 'transcriber/js/recorder.js' %}"></script>
 {% endblock %}

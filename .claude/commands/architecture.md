@@ -40,10 +40,7 @@ transcriber/          ← single Django app containing all app logic
 |---|---|---|
 | GET | `/` | Main SPA (Record tab) |
 | GET | `/upload/` | Main SPA (Upload tab pre-selected) |
-| POST | `/api/upload/` | Receive recorded audio blob → transcribe |
-| POST | `/api/upload-file/` | Receive uploaded file → transcribe |
-
-Both POST API endpoints share identical logic (accept file, write it to a temporary file, run Whisper, return JSON). They are separate routes because the record and upload tabs were originally distinct pages.
+| POST | `/api/upload/` | Receive any audio file or recorded blob → transcribe |
 
 ---
 
@@ -80,7 +77,7 @@ The UI is a single HTML page (`record.html`) with two tab panels — Record and 
 
 1. **Record tab** — `MediaRecorder` captures mic audio (or tab audio, or both mixed via `AudioContext`). On "End Recording", chunks are assembled into a `Blob` and a local object URL is created for preview. "Upload & Transcribe" POSTs the blob to `/api/upload/`.
 
-2. **Upload tab** — user selects a file; a local object URL is created immediately for preview. "Transcribe" POSTs to `/api/upload-file/`.
+2. **Upload tab** — user selects a file; a local object URL is created immediately for preview. "Transcribe" POSTs the selected file to `/api/upload/`.
 
 3. **Loading state** — both panels are hidden, tabs are disabled, a spinner + elapsed timer + audio player are shown so the user can listen while waiting.
 
