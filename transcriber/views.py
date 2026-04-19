@@ -42,13 +42,23 @@ def _format_exception_error(exc: Exception) -> str:
     return f'Transcription failed: {exc_type}.'
 
 
+def _upload_staging_dir() -> Path:
+    upload_dir = Path(settings.UPLOAD_STAGING_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    return upload_dir
+
+
 def _transcribe_uploaded_file(uploaded_file, model_size: str):
     original_filename = uploaded_file.name or 'audio'
     suffix = Path(original_filename).suffix or '.tmp'
     temp_path = None
 
     try:
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(
+            suffix=suffix,
+            delete=False,
+            dir=_upload_staging_dir(),
+        ) as temp_file:
             for chunk in uploaded_file.chunks():
                 temp_file.write(chunk)
             temp_path = temp_file.name

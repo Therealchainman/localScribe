@@ -55,9 +55,12 @@ Set these in `transcribe_project/settings.py`:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `WHISPER_MODEL_SIZE` | `large` | Whisper model: `tiny`, `base`, `small`, `medium`, `large` |
+| `UPLOAD_STAGING_DIR` | `BASE_DIR / "media" / "uploads"` | Temporary upload staging directory used before Whisper reads the file |
 | `DATA_UPLOAD_MAX_MEMORY_SIZE` | 100 MB | Maximum upload file size |
 
 The header model selector defaults to `large` on each page load. Changing it only affects the current browser page state; refreshing or reopening the app resets the selector back to the configured default.
+
+Uploaded files are staged temporarily in `media/uploads/` before Whisper reads them. This default keeps the temp path inside a normal, non-hidden directory under your home folder, which helps Snap-confined `ffmpeg` builds access the file more reliably than `/tmp`.
 
 ## Privacy and storage
 

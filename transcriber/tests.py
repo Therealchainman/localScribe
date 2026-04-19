@@ -1,4 +1,5 @@
 import os
+import tempfile
 import threading
 import time
 from unittest.mock import ANY, patch
@@ -75,6 +76,25 @@ class UploadApiTests(SimpleTestCase):
 
         with patch('transcriber.views.transcribe_audio', side_effect=fake_transcribe):
             response = self.client.post('/api/upload/', {'audio_file': upload})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(os.path.exists(captured_path['value']))
+
+    def test_upload_temp_file_uses_configured_staging_directory(self):
+        upload = SimpleUploadedFile('cleanup.wav', b'audio-bytes', content_type='audio/wav')
+
+        with tempfile.TemporaryDirectory() as staging_root:
+            staging_dir = os.path.join(staging_root, 'visible-upload-cache')
+            captured_path = {}
+
+            def fake_transcribe(path, model_size=None):
+                captured_path['value'] = path
+                self.assertTrue(path.startswith(staging_dir + os.sep))
+                return {'text': 'done', 'language': 'en'}
+
+            with override_settings(UPLOAD_STAGING_DIR=staging_dir):
+                with patch('transcriber.views.transcribe_audio', side_effect=fake_transcribe):
+                    response = self.client.post('/api/upload/', {'audio_file': upload})
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(os.path.exists(captured_path['value']))

@@ -80,6 +80,10 @@ STATIC_URL = 'static/'
 # Whisper model size: tiny, base, small, medium, large
 WHISPER_MODEL_SIZE = 'large'
 
+# Stage uploads in a non-hidden directory under BASE_DIR so Snap-confined
+# ffmpeg builds can still read the file during transcription.
+UPLOAD_STAGING_DIR = BASE_DIR / 'media' / 'uploads'
+
 # Max upload size: 100 MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600
 FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600
