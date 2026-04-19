@@ -349,6 +349,38 @@ function restoreTranscriptionUIAfterFailure(sourceTab, errorText) {
     transcribeFileBtn.disabled = false;
 }
 
+async function readApiResponse(resp) {
+    const rawText = await resp.text();
+    if (!rawText) return { data: null, rawText: '' };
+
+    try {
+        return { data: JSON.parse(rawText), rawText };
+    } catch (_err) {
+        return { data: null, rawText };
+    }
+}
+
+function getServerErrorMessage(data, fallbackText) {
+    if (!data || typeof data !== 'object') return fallbackText;
+    const parts = [];
+    if (typeof data.error === 'string' && data.error.trim()) {
+        parts.push(data.error.trim());
+    }
+    if (typeof data.traceback === 'string' && data.traceback.trim()) {
+        parts.push(data.traceback.trim());
+    }
+    if (parts.length > 0) return parts.join('\n\n');
+    return fallbackText;
+}
+
+function getResponseFallbackError(resp, rawText, defaultText) {
+    const trimmedText = (rawText || '').trim();
+    if (trimmedText) {
+        return `${defaultText}\n\n${trimmedText}`;
+    }
+    return `${defaultText} (HTTP ${resp.status})`;
+}
+
 async function transcribeSource(sourceTab) {
     const request = buildTranscriptionRequest(sourceTab);
     if (!request) return;
@@ -362,14 +394,17 @@ async function transcribeSource(sourceTab) {
             headers: { 'X-CSRFToken': getCsrfToken() },
             body: request.formData,
         });
-        const data = await resp.json();
+        const { data, rawText } = await readApiResponse(resp);
         hideLoading();
         if (resp.ok) {
             showResult(data.transcript, request.audioURL, data.filename, data.download_filename, sourceTab);
         } else {
-            const errorText = sourceTab === 'record'
+            const fallbackText = sourceTab === 'record'
                 ? 'Upload failed. Please try again.'
                 : 'Upload failed. Check the file format and try again.';
+            const errorText = data
+                ? getServerErrorMessage(data, fallbackText)
+                : getResponseFallbackError(resp, rawText, fallbackText);
             restoreTranscriptionUIAfterFailure(sourceTab, errorText);
         }
     } catch (err) {

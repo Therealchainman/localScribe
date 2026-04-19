@@ -1,5 +1,7 @@
 import os
+import sys
 import tempfile
+import traceback
 from pathlib import Path
 
 from django.conf import settings
@@ -22,6 +24,22 @@ def main_view(request):
 def _download_filename(original_filename: str) -> str:
     stem = Path(original_filename).stem or 'transcript'
     return f'{stem}.zip'
+
+
+def _first_form_error(form: AudioUploadForm) -> str:
+    error_data = form.errors.get_json_data()
+    for field_errors in error_data.values():
+        if field_errors:
+            return field_errors[0].get('message', 'Upload validation failed.')
+    return 'Upload validation failed.'
+
+
+def _format_exception_error(exc: Exception) -> str:
+    message = str(exc).strip()
+    exc_type = type(exc).__name__
+    if message:
+        return f'Transcription failed: {exc_type}: {message}'
+    return f'Transcription failed: {exc_type}.'
 
 
 def _transcribe_uploaded_file(uploaded_file, model_size: str):
@@ -50,7 +68,7 @@ def _transcribe_uploaded_file(uploaded_file, model_size: str):
 def _handle_upload(request):
     form = AudioUploadForm(request.POST, request.FILES)
     if not form.is_valid():
-        return JsonResponse({'error': form.errors.as_json()}, status=400)
+        return JsonResponse({'error': _first_form_error(form)}, status=400)
 
     try:
         model_size = resolve_model_size(request.POST.get('model_size'))
@@ -60,7 +78,11 @@ def _handle_upload(request):
     try:
         payload = _transcribe_uploaded_file(form.cleaned_data['audio_file'], model_size)
     except Exception as exc:
-        return JsonResponse({'error': f'Transcription failed: {exc}'}, status=500)
+        traceback.print_exc(file=sys.stderr)
+        error_payload = {'error': _format_exception_error(exc)}
+        if settings.DEBUG:
+            error_payload['traceback'] = traceback.format_exc()
+        return JsonResponse(error_payload, status=500)
     return JsonResponse(payload)
 
 

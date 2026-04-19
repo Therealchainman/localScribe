@@ -9,6 +9,12 @@ Built with Django. Transcription runs locally — no API keys required.
 - Python 3.12+
 - ffmpeg
 
+Verify `ffmpeg` with:
+
+```bash
+ffmpeg -version
+```
+
 Install ffmpeg on macOS:
 
 ```bash

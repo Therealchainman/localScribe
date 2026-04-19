@@ -4,7 +4,7 @@ import time
 from unittest.mock import ANY, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 
 from transcriber import services
 
@@ -89,12 +89,27 @@ class UploadApiTests(SimpleTestCase):
             self.assertEqual(model_size, 'large')
             raise RuntimeError('boom')
 
-        with patch('transcriber.views.transcribe_audio', side_effect=fake_transcribe):
-            response = self.client.post('/api/upload/', {'audio_file': upload})
+        with patch('transcriber.views.traceback.print_exc') as mock_print_exc:
+            with patch('transcriber.views.transcribe_audio', side_effect=fake_transcribe):
+                response = self.client.post('/api/upload/', {'audio_file': upload})
 
+        mock_print_exc.assert_called_once()
         self.assertEqual(response.status_code, 500)
-        self.assertEqual(response.json(), {'error': 'Transcription failed: boom'})
+        self.assertEqual(response.json(), {'error': 'Transcription failed: RuntimeError: boom'})
         self.assertFalse(os.path.exists(captured_path['value']))
+
+    @override_settings(DEBUG=True)
+    def test_transcription_failure_in_debug_includes_traceback(self):
+        upload = SimpleUploadedFile('broken.webm', b'audio-bytes', content_type='audio/webm')
+
+        with patch('transcriber.views.traceback.print_exc') as mock_print_exc:
+            with patch('transcriber.views.transcribe_audio', side_effect=RuntimeError('boom')):
+                response = self.client.post('/api/upload/', {'audio_file': upload})
+
+        mock_print_exc.assert_called_once()
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json()['error'], 'Transcription failed: RuntimeError: boom')
+        self.assertIn('traceback', response.json())
 
     def test_invalid_upload_returns_validation_error(self):
         upload = SimpleUploadedFile('notes.txt', b'not-audio', content_type='text/plain')
@@ -102,7 +117,10 @@ class UploadApiTests(SimpleTestCase):
         response = self.client.post('/api/upload/', {'audio_file': upload})
 
         self.assertEqual(response.status_code, 400)
-        self.assertIn('error', response.json())
+        self.assertEqual(
+            response.json(),
+            {'error': "File type '.txt' is not accepted. Allowed: .m4a, .mov, .mp3, .mp4, .ogg, .wav, .webm"},
+        )
 
     def test_invalid_model_size_returns_validation_error(self):
         upload = SimpleUploadedFile('clip.wav', b'fake-audio', content_type='audio/wav')
@@ -186,31 +204,59 @@ class ServiceTests(SimpleTestCase):
         def run_transcription(label, path, model_size):
             results[label] = services.transcribe_audio(path, model_size=model_size)
 
-        with patch('transcriber.services.get_model', side_effect=fake_get_model):
-            first_thread = threading.Thread(
-                target=run_transcription,
-                args=('first', 'first.wav', 'large'),
-            )
-            second_thread = threading.Thread(
-                target=run_transcription,
-                args=('second', 'second.wav', 'tiny'),
-            )
+        with patch('transcriber.services.ensure_ffmpeg_available'):
+            with patch('transcriber.services.get_model', side_effect=fake_get_model):
+                first_thread = threading.Thread(
+                    target=run_transcription,
+                    args=('first', 'first.wav', 'large'),
+                )
+                second_thread = threading.Thread(
+                    target=run_transcription,
+                    args=('second', 'second.wav', 'tiny'),
+                )
 
-            first_thread.start()
-            self.assertTrue(first_started.wait(timeout=1))
+                first_thread.start()
+                self.assertTrue(first_started.wait(timeout=1))
 
-            second_thread.start()
-            time.sleep(0.05)
+                second_thread.start()
+                time.sleep(0.05)
 
-            self.assertEqual(get_model_calls, ['large'])
-            self.assertFalse(second_started.is_set())
+                self.assertEqual(get_model_calls, ['large'])
+                self.assertFalse(second_started.is_set())
 
-            allow_first_to_finish.set()
-            first_thread.join(timeout=1)
-            second_thread.join(timeout=1)
+                allow_first_to_finish.set()
+                first_thread.join(timeout=1)
+                second_thread.join(timeout=1)
 
         self.assertFalse(first_thread.is_alive())
         self.assertFalse(second_thread.is_alive())
         self.assertEqual(get_model_calls, ['large', 'tiny'])
         self.assertEqual(results['first']['text'], 'first')
         self.assertEqual(results['second']['text'], 'second')
+
+    def test_transcribe_audio_requires_ffmpeg_on_path(self):
+        with patch('transcriber.services.shutil.which', return_value=None):
+            with patch('transcriber.services.get_model') as mock_get_model:
+                with self.assertRaisesRegex(RuntimeError, 'ffmpeg is not installed or not available on PATH'):
+                    services.transcribe_audio('meeting.m4a', model_size='large')
+
+        mock_get_model.assert_not_called()
+
+    def test_transcribe_audio_requires_working_ffmpeg_binary(self):
+        with patch('transcriber.services.shutil.which', return_value='/usr/bin/ffmpeg'):
+            with patch(
+                'transcriber.services.subprocess.run',
+                side_effect=services.subprocess.CalledProcessError(
+                    1,
+                    ['/usr/bin/ffmpeg', '-version'],
+                    stderr='snap-confine has elevated permissions and is not confined but should be.',
+                ),
+            ):
+                with patch('transcriber.services.get_model') as mock_get_model:
+                    with self.assertRaisesRegex(
+                        RuntimeError,
+                        'ffmpeg is on PATH but failed to start cleanly: snap-confine has elevated permissions',
+                    ):
+                        services.transcribe_audio('meeting.m4a', model_size='large')
+
+        mock_get_model.assert_not_called()

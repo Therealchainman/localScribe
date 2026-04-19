@@ -6,3 +6,4 @@ media/uploads/
 .DS_Store
 .ruff_cache/
 .pytest_cache/
+.codex
