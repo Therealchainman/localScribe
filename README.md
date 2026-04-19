@@ -39,6 +39,28 @@ python3 manage.py runserver
 
 Open http://127.0.0.1:8000/ in your browser.
 
+## macOS Desktop Launcher
+
+If you want a clickable launcher on macOS, use the included
+[`run-local-scribe.command`](./run-local-scribe.command) file.
+
+1. Make it executable once:
+
+```bash
+chmod +x run-local-scribe.command
+```
+
+2. Double-click `run-local-scribe.command` in Finder.
+3. If you want it on your Desktop, create an alias and move the alias to the Desktop.
+
+When launched, it:
+
+- activates `.venv`
+- starts Django on `http://127.0.0.1:8000/`
+- opens the app in your default browser
+
+Keep the Terminal window open while the app is running. Closing that window stops the server.
+
 ## Usage
 
 1. Record audio in the browser, or select an audio/video file to upload.
