@@ -6,20 +6,36 @@
     padding: 0;
 }
 
+:root {
+    --bg-page: #242424;
+    --bg-surface: #2f2f2f;
+    --bg-surface-alt: #383838;
+    --bg-surface-soft: #343434;
+    --border-color: #4b4b4b;
+    --text-primary: #f2f2f2;
+    --text-secondary: #c7c7c7;
+    --text-muted: #9f9f9f;
+    --accent: #4a6cf7;
+    --accent-hover: #6483ff;
+    --danger: #d32f2f;
+    --danger-hover: #ef5350;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
-    color: #1a1a1a;
-    background-color: #f5f5f5;
+    color: var(--text-primary);
+    background-color: var(--bg-page);
     padding: 2rem 1rem;
 }
 
 .container {
     max-width: 700px;
     margin: 0 auto;
-    background: #fff;
+    background: var(--bg-surface);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
     padding: 2rem;
 }
 
@@ -44,12 +60,12 @@ header h1 {
     display: inline-flex;
     align-items: center;
     gap: 0.75rem;
-    color: #1a1a1a;
+    color: var(--text-primary);
     text-decoration: none;
 }
 
 .site-brand:hover {
-    color: #4a6cf7;
+    color: var(--accent-hover);
 }
 
 .site-brand__icon {
@@ -74,34 +90,34 @@ header h1 {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #666;
+    color: var(--text-secondary);
 }
 
 .model-select {
     min-width: 150px;
     padding: 0.55rem 0.75rem;
-    border: 1px solid #d6d6d6;
+    border: 1px solid var(--border-color);
     border-radius: 6px;
-    background: #fff;
-    color: #1a1a1a;
+    background: var(--bg-surface-alt);
+    color: var(--text-primary);
     font-size: 0.95rem;
 }
 
 .model-select:focus {
-    outline: 2px solid rgba(74, 108, 247, 0.2);
-    border-color: #4a6cf7;
+    outline: 2px solid rgba(74, 108, 247, 0.3);
+    border-color: var(--accent);
 }
 
 .model-select:disabled {
-    background: #f1f1f1;
-    color: #777;
+    background: #434343;
+    color: var(--text-muted);
     cursor: not-allowed;
 }
 
 h2 {
     font-size: 1.2rem;
     margin-bottom: 1rem;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .form-group {
@@ -118,28 +134,29 @@ h2 {
     display: block;
     width: 100%;
     padding: 0.75rem;
-    border: 2px dashed #ccc;
+    border: 2px dashed #5a5a5a;
     border-radius: 6px;
-    background: #fafafa;
+    background: var(--bg-surface-soft);
+    color: var(--text-secondary);
     cursor: pointer;
     font-size: 0.95rem;
 }
 
 .form-group input[type="file"]:hover {
-    border-color: #4a6cf7;
-    background: #f0f4ff;
+    border-color: var(--accent);
+    background: #3a4158;
 }
 
 .help-text {
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-muted);
     margin-top: 0.5rem;
 }
 
 #loading {
     margin-top: 1.5rem;
     text-align: center;
-    color: #555;
+    color: var(--text-secondary);
 }
 
 .spinner {
@@ -160,14 +177,14 @@ h2 {
 
 .meta {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--text-muted);
     margin-bottom: 1rem;
 }
 
 .transcript-box {
     position: relative;
-    background: #f8f9fa;
-    border: 1px solid #e5e5e5;
+    background: var(--bg-surface-soft);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     padding: 1.25rem;
     margin-bottom: 1.5rem;
@@ -180,10 +197,10 @@ h2 {
     right: 0.35rem;
     min-width: 2rem;
     height: 2rem;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #666;
+    background: rgba(47, 47, 47, 0.96);
+    color: var(--text-secondary);
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1;
@@ -207,9 +224,9 @@ h2 {
 
 .copy-transcript-btn:hover,
 .copy-transcript-btn:focus-visible {
-    background: #4a6cf7;
+    background: var(--accent);
     color: #fff;
-    border-color: #4a6cf7;
+    border-color: var(--accent);
     outline: none;
 }
 
@@ -285,7 +302,7 @@ h2 {
 
 .btn:not(.btn-secondary) {
     color: #fff;
-    background-color: #4a6cf7;
+    background-color: var(--accent);
 }
 
 .btn:not(.btn-secondary):hover {
@@ -293,17 +310,17 @@ h2 {
 }
 
 .btn-secondary {
-    color: #333;
-    background-color: #e5e5e5;
+    color: var(--text-primary);
+    background-color: #4a4a4a;
 }
 
 .btn-secondary:hover {
-    background-color: #d5d5d5;
+    background-color: #5a5a5a;
 }
 
 /* Recorder page */
 .source-selector {
-    border: 1px solid #e5e5e5;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 0.6rem 1.2rem 0.8rem;
     display: flex;
@@ -317,7 +334,7 @@ h2 {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #888;
+    color: var(--text-muted);
     padding: 0 0.4rem;
 }
 
@@ -336,7 +353,7 @@ h2 {
 
 .hint {
     font-size: 0.85rem;
-    color: #888;
+    color: var(--text-muted);
     text-align: center;
     max-width: 380px;
     margin: -0.75rem 0;
@@ -376,19 +393,19 @@ h2 {
     font-size: 2rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    color: #333;
+    color: var(--text-primary);
     letter-spacing: 0.05em;
 }
 
 .status-msg {
     font-size: 0.95rem;
-    color: #555;
+    color: var(--text-secondary);
     min-height: 1.4em;
     text-align: center;
 }
 
 .status-msg.error {
-    color: #d32f2f;
+    color: var(--danger-hover);
 }
 
 audio {
@@ -415,12 +432,12 @@ audio {
 }
 
 .pause-btn {
-    color: #333;
-    background-color: #e5e5e5;
+    color: var(--text-primary);
+    background-color: #4a4a4a;
 }
 
 .pause-btn:hover {
-    background-color: #d5d5d5;
+    background-color: #5a5a5a;
 }
 
 .end-btn {
@@ -468,17 +485,17 @@ audio {
     border-bottom: 2px solid transparent;
     margin-bottom: -2px;
     cursor: pointer;
-    color: #555;
+    color: var(--text-secondary);
     transition: color 0.15s, border-color 0.15s;
 }
 
 .tab-btn:hover {
-    color: #4a6cf7;
+    color: var(--accent-hover);
 }
 
 .tab-btn[aria-selected="true"] {
-    color: #4a6cf7;
-    border-bottom-color: #4a6cf7;
+    color: var(--accent-hover);
+    border-bottom-color: var(--accent);
 }
 
 .tab-btn:disabled {
@@ -497,9 +514,9 @@ audio {
 /* Warning banner shown when a transcript is present */
 .warning-banner {
     font-size: 0.8rem;
-    color: #888;
-    background: #fffbe6;
-    border: 1px solid #f0d060;
+    color: #f8e7ac;
+    background: #4a4124;
+    border: 1px solid #8e7840;
     border-radius: 4px;
     padding: 0.4rem 0.75rem;
     margin-bottom: 1rem;
