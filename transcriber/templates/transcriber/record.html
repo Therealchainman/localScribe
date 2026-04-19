@@ -4,13 +4,22 @@
 {% block title %}Local Scribe{% endblock %}
 
 {% block header_controls %}
-<div class="model-selector">
-    <label for="model-size-select">Whisper Model</label>
-    <select id="model-size-select" class="model-select">
-        {% for model in whisper_model_sizes %}
-        <option value="{{ model }}"{% if model == default_whisper_model %} selected{% endif %}>{{ model }}</option>
-        {% endfor %}
-    </select>
+<div class="header-controls">
+    <div class="model-selector">
+        <label for="result-format-select">Result Format</label>
+        <select id="result-format-select" class="model-select">
+            <option value="prompt" selected>Prompt + Transcript</option>
+            <option value="transcript">Transcript Only</option>
+        </select>
+    </div>
+    <div class="model-selector">
+        <label for="model-size-select">Whisper Model</label>
+        <select id="model-size-select" class="model-select">
+            {% for model in whisper_model_sizes %}
+            <option value="{{ model }}"{% if model == default_whisper_model %} selected{% endif %}>{{ model }}</option>
+            {% endfor %}
+        </select>
+    </div>
 </div>
 {% endblock %}
 

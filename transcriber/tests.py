@@ -179,6 +179,9 @@ class PageTests(SimpleTestCase):
         response = self.client.get('/')
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="result-format-select"', html=False)
+        self.assertContains(response, '<option value="prompt" selected>Prompt + Transcript</option>', html=False)
+        self.assertContains(response, '<option value="transcript">Transcript Only</option>', html=False)
         self.assertContains(response, 'id="model-size-select"', html=False)
         self.assertContains(response, '<option value="large" selected>large</option>', html=False)
         self.assertContains(response, '<option value="tiny">tiny</option>', html=False)

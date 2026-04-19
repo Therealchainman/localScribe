@@ -37,6 +37,7 @@ function getCsrfToken() {
 const panelRecord       = document.getElementById('panel-record');
 const panelUpload       = document.getElementById('panel-upload');
 const modelSizeSelect   = document.getElementById('model-size-select');
+const resultFormatSelect = document.getElementById('result-format-select');
 const recordBtn         = document.getElementById('record-btn');
 const recordingControls = document.getElementById('recording-controls');
 const pauseBtn          = document.getElementById('pause-btn');
@@ -82,6 +83,7 @@ let isPreparingDownload     = false;
 let transcribeTimerInterval = null;
 let transcribeElapsed       = 0;
 let skipNextStop            = false;  // guard for async onstop after tab switch
+let rawResultTranscript     = '';
 
 const textEncoder = new TextEncoder();
 const crcTable = (() => {
@@ -124,6 +126,46 @@ function getSelectedSource() {
 
 function getSelectedModelSize() {
     return modelSizeSelect ? modelSizeSelect.value : 'large';
+}
+
+function getSelectedResultFormat() {
+    return resultFormatSelect ? resultFormatSelect.value : 'prompt';
+}
+
+function formatTranscriptForResult(transcript) {
+    if (getSelectedResultFormat() === 'transcript') {
+        return transcript;
+    }
+
+    return [
+        '1. Executive Summary',
+        'Give a concise summary of the transcript in 5 to 10 bullets or a short paragraph.',
+        'Focus on the main purpose, major decisions, important topics, and final outcomes.',
+        '',
+        '2. Detailed Breakdown',
+        'Organize the content by topic, theme, or timeline.',
+        'Explain what was discussed in each section with enough detail that someone who did not read the transcript can understand it.',
+        'Include key arguments, explanations, decisions, open questions, disagreements, and notable insights.',
+        'When useful, mention who said what, but only if it is clear from the transcript.',
+        '',
+        '3. Action Items',
+        'Extract all action items, next steps, follow-ups, and commitments.',
+        'For each action item, include:',
+        'Task',
+        'Deadline or timeframe, if mentioned',
+        'Relevant context',
+        '',
+        'Transcript:',
+        '<<<TRANSCRIPT_START>>>',
+        transcript,
+        '<<<TRANSCRIPT_END>>>',
+    ].join('\n');
+}
+
+function renderResultTranscript() {
+    resultTranscript.textContent = rawResultTranscript
+        ? formatTranscriptForResult(rawResultTranscript)
+        : '';
 }
 
 function revokeTranscriptDownloadURL() {
@@ -249,6 +291,7 @@ function clearState() {
     resultAudioFile = null;
     currentResultSourceTab = null;
     isPreparingDownload = false;
+    rawResultTranscript = '';
     // Reset result section
     resultSection.hidden = true;
     resultTranscript.textContent = '';
@@ -269,6 +312,7 @@ function showLoading(audioURL) {
     resultSection.hidden = true;
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = true; });
     if (modelSizeSelect) modelSizeSelect.disabled = true;
+    if (resultFormatSelect) resultFormatSelect.disabled = true;
     loadingAudio.src = audioURL || '';
     loadingDiv.style.display = 'block';
     transcribeTimer.textContent = '00:00:00';
@@ -285,12 +329,15 @@ function hideLoading() {
     loadingDiv.style.display = 'none';
     document.querySelectorAll('.tab-btn').forEach(b => { b.disabled = false; });
     if (modelSizeSelect) modelSizeSelect.disabled = false;
+    if (resultFormatSelect) resultFormatSelect.disabled = false;
 }
 
 function showResult(transcript, audioObjectURL, filename, downloadFilename, sourceTab) {
+    revokeTranscriptDownloadURL();
     resultFilename.textContent = filename;
     resultMeta.textContent = `Transcribed in ${formatTimeLong(transcribeElapsed)}`;
-    resultTranscript.textContent = transcript;
+    rawResultTranscript = transcript;
+    renderResultTranscript();
     resultAudio.src = audioObjectURL;
     resultAudioFile = sourceTab === 'record' ? recordedBlob : uploadedFile;
     currentResultSourceTab = sourceTab;
@@ -668,6 +715,13 @@ if (copyBtn) {
             setCopyState('failed', 'Failed');
         }
         copyResetTimer = window.setTimeout(() => setCopyState('idle'), 1800);
+    });
+}
+
+if (resultFormatSelect) {
+    resultFormatSelect.addEventListener('change', () => {
+        revokeTranscriptDownloadURL();
+        renderResultTranscript();
     });
 }
 
